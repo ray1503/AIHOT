@@ -21,9 +21,11 @@ const citation = (available: boolean): ReportCitation => ({ itemId: available ? 
 const report = (kind: ReportKind): ReportDetail => ({ kind, key: kind === "daily" ? "2026-10-04" : kind === "weekly" ? "2026-W40" : "2026-10", issueNumber: 1, title: `${SITE.name} 测试刊物`, generatedAt: at, lead: { title: "本期已验证的重要变化", leadParagraph: "本期的导读与依据。" }, leadItemId: item.id, overview: null, highlights: [citation(true)], sections: [], flashes: [], cover: null, metrics: {}, readingMinutes: 1, prev: null, next: null });
 const story: StoryDetail = { publicId: "metadata-story", title: "测试事件的最新进展", status: "settled", reportCount: 1, sourceCount: 1, firstReportAt: at, latestAt: at, digest: "当前可核实的事件综述。", digestUpdatedAt: "2026-10-04T09:00:00.000Z", summary: null, excerpt: null, latest: null, latestReport: null, whyHot: { participants48h: 0, newParticipants6h: 0, recentReports24h: 0, observationComplete: true, rank: null }, developments: [], officialReports: [], timeline: [{ id: item.id, title: item.title, summary: item.summary, source: { name: item.source.name, firstParty: true }, publishedAt: at, selected: true }], heat: [], related: [], topics: [] };
 let web: WebServer;
+let timelineLimit: string | null = null;
 const api = createServer((req, res) => {
   const url = new URL(req.url!, "http://local");
   const path = url.pathname;
+  if (path === "/api/site/timeline") timelineLimit = url.searchParams.get("limit");
   res.setHeader("Content-Type", "application/json");
   const send = (value: unknown) => res.end(JSON.stringify(value));
   if (path === "/api/site/meta") return send({ changelogVersion: "fixture" });
@@ -71,6 +73,8 @@ test("the home title leads with the site name and the heading names the site", a
   assert.equal($("title").text(), SITE.homeTitle);
   assert.equal($("meta[property='og:title']").attr("content"), SITE.homeTitle);
   assert.equal($("h1").first().text(), `${SITE.name} · 精选`);
+  assert.equal($("link[rel=canonical]").attr("href"), `${web.origin}/`);
+  assert.equal(timelineLimit, "10");
   assert.equal(brandedHomeTitle("站名", "站名 — 其余标题"), "站名 — 其余标题");
   assert.equal(brandedHomeTitle("站名", "旧前缀 — 其余标题"), "站名 — 其余标题");
   assert.equal(brandedHomeTitle("站名", "没有分隔的标题"), "站名 — 没有分隔的标题");
