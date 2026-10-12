@@ -16,7 +16,7 @@
 
 - `name`：站名。导航、标题、分享图、RSS、MCP、后台都用它。`organization.name` 是结构化数据里的网站运营者（给搜索引擎看），默认也是站名，改站名时一起改；`organization.founder` 是创始人（选填）。
 - `subject`：行业词。页面上“AI 日报”“全部 AI 动态”会变成“法律日报”“全部法律动态”。
-- `homeTitle`、`topicsTitle`、`description`、`tagline`、`keywords`：首页和主题目录页的标题、一句话介绍、分享图下方的小字、给搜索引擎的关键词。
+- `homeTitle`、`topicsTitle`、`description`、`tagline`、`keywords`：首页和主题目录页的标题、一句话介绍、分享图下方的小字、给搜索引擎的关键词。首页文档标题以 `name` 开头：`homeTitle` 已经这么写就原样用；如果第一个 ` — ` 前面是另一个名字，页面上换成 `name`，后半句保留。首页大标题是「站名 · 精选」。`description` 可以继续写和站名不同的产品说法。
 - `feedbackExample`：反馈表单输入框里的示例。
 - `locale`：界面语言（网页的语言标记、分享卡片和结构化数据），`public/` 文件里的 `{{locale}}` 也换成它。
 - `since`：网站开始收录的年份（结构化数据里的时间范围，选填）。

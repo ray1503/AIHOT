@@ -6,7 +6,7 @@ import type { StoryDetail, StoryReportView } from "@aihot/contracts/site";
 import { SITE } from "@aihot/site";
 import { cachedPage, loadOr404 } from "../lib/api.server";
 import { pageReuse } from "../lib/page-reuse";
-import { breadcrumbLd, pageMeta, storyLd, titled } from "../lib/seo";
+import { breadcrumbLd, pageMeta, storyArticleLd, storyDescription, storyLd, titled } from "../lib/seo";
 import { beijingDate, beijingTime } from "@aihot/contracts/time";
 import { monthDay, monthDayTime, relativeTime } from "../lib/format";
 import { HeatChart } from "../features/story/HeatChart";
@@ -34,11 +34,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const s = loaderData.story;
   return pageMeta({
     title: s.title,
-    description: (s.digest ?? s.summary ?? s.excerpt?.text)?.slice(0, 150) ?? `${s.sourceCount} 个报道来源 ${s.reportCount} 篇报道，完整时间线与最新进展。`,
+    description: storyDescription(s),
     path: `/story/${s.publicId}`,
     image: `/og/stories/${s.publicId}.png`,
     type: "article",
     jsonLd: [
+      storyArticleLd(s),
       storyLd(s),
       // Under the board only while it is a way in, as the back link.
       breadcrumbLd([{ name: SITE.name, path: "/" }, ...(inNav("/hot") ? [{ name: "热点榜", path: "/hot" }] : []), { name: s.title, path: `/story/${s.publicId}` }]),

@@ -4,14 +4,14 @@
 // - tracking and obsolete positioning parameters leak into canonical, or ordinary archives become noindex;
 // - a report's title omits its visible lead, or metadata promotes a withdrawn citation;
 // - an article invents a modification date from its source's publication date or omits its image;
-// - a story has no machine-readable subject, or claims its first report is its own publication date.
+// - a story collection claims its first report is its own publication date (the NewsArticle dates the event from the earliest and latest times already shown).
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { after, before, test } from "node:test";
 import * as cheerio from "cheerio";
 import type { FeedItemSummary, ReportCitation, ReportDetail, ReportKind, SiteItemDetail, StoryDetail } from "@aihot/contracts/site";
 import { SITE, withSubject } from "@aihot/site";
-import { articleLd, readFilters, reportLd } from "../apps/web/app/lib/seo.ts";
+import { articleLd, brandedHomeTitle, readFilters, reportLd, storyArticleLd } from "../apps/web/app/lib/seo.ts";
 import { startWebServer, type WebServer } from "../apps/web/tests/web-server.ts";
 
 const at = "2026-10-04T08:00:00.000Z";
@@ -64,6 +64,16 @@ test("filtered feeds keep their exact content address but leave indexing to the 
   const $ = await page("/all?q=Claude&tab=relevance&page=2&anchorAt=old");
   assert.equal($("meta[name=robots]").attr("content"), "noindex, follow");
   assert.equal($("link[rel=canonical]").attr("href"), `${web.origin}/all?q=Claude&tab=relevance&page=2`);
+});
+
+test("the home title leads with the site name and the heading names the site", async () => {
+  const $ = await page("/");
+  assert.equal($("title").text(), SITE.homeTitle);
+  assert.equal($("meta[property='og:title']").attr("content"), SITE.homeTitle);
+  assert.equal($("h1").first().text(), `${SITE.name} · 精选`);
+  assert.equal(brandedHomeTitle("站名", "站名 — 其余标题"), "站名 — 其余标题");
+  assert.equal(brandedHomeTitle("站名", "旧前缀 — 其余标题"), "站名 — 其余标题");
+  assert.equal(brandedHomeTitle("站名", "没有分隔的标题"), "站名 — 没有分隔的标题");
 });
 
 test("ordinary feed pages remain indexable and normalize ignored parameters", async () => {
@@ -121,4 +131,21 @@ test("story metadata describes the visible collection, current summary and repor
   const list = collection.mainEntity as { itemListElement: Array<{ name: string }> };
   assert.deepEqual(list.itemListElement.map((entry) => entry.name), [item.title]);
   assert.ok($("main").text().includes(story.digest!));
+  const article = structured($).find((entry) => entry["@type"] === "NewsArticle")!;
+  const canonical = `${web.origin}/story/${story.publicId}`;
+  assert.equal($("h1").first().text(), story.title);
+  assert.equal(article.headline, story.title);
+  assert.equal(article.description, $("meta[name=description]").attr("content"));
+  assert.equal(article.datePublished, story.firstReportAt);
+  assert.equal(article.dateModified, story.digestUpdatedAt);
+  assert.equal(article.image, $("meta[property='og:image']").attr("content"));
+  assert.equal((article.mainEntityOfPage as { "@id": string })["@id"], canonical);
+  assert.equal($("link[rel=canonical]").attr("href"), canonical);
+  assert.deepEqual(article.author, { "@id": `${web.origin}/#organization` });
+  assert.deepEqual(article.publisher, { "@id": `${web.origin}/#organization` });
+  assert.ok(structured($).some((entry) => entry["@type"] === "BreadcrumbList"));
+  const undated = storyArticleLd({ ...story, digest: null, summary: null, excerpt: null, digestUpdatedAt: null });
+  assert.equal(undated.datePublished, story.firstReportAt);
+  assert.equal(undated.dateModified, story.latestAt);
+  assert.match(String(undated.description), /个报道来源/);
 });
