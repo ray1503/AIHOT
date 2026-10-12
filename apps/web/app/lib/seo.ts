@@ -15,8 +15,20 @@ export function siteUrl(): string {
   return (process.env.SITE_URL || SITE.defaultUrl).replace(/\/+$/, "");
 }
 
-const HOME_TITLE = SITE.homeTitle;
+const HOME_TITLE_SEP = " — ";
 const SITE_DESCRIPTION = SITE.description;
+
+/**
+ * The home document title leads with the site name (`SITE.name`). A `homeTitle` that already
+ * does is kept. Otherwise the label before the first " — " is replaced by the site name and
+ * the rest of the title stays. The meta description is separate and can keep a product phrase.
+ */
+export function brandedHomeTitle(name: string = SITE.name, homeTitle: string = SITE.homeTitle): string {
+  if (homeTitle.startsWith(name)) return homeTitle;
+  const at = homeTitle.indexOf(HOME_TITLE_SEP);
+  if (at > 0) return `${name}${homeTitle.slice(at)}`;
+  return `${name}${HOME_TITLE_SEP}${homeTitle}`;
+}
 
 export interface PageMetaInput {
   title?: string | null;
@@ -72,7 +84,8 @@ export function titled(title: string): string {
 
 export function pageMeta(input: PageMetaInput): MetaDescriptor[] {
   const base = siteUrl();
-  const title = input.title ? (input.rawTitle ? input.title : titled(input.title)) : HOME_TITLE;
+  const homeTitle = brandedHomeTitle();
+  const title = input.title ? (input.rawTitle ? input.title : titled(input.title)) : homeTitle;
   const description = input.description ?? SITE_DESCRIPTION;
   const url = `${base}${input.path}`;
   const image = input.image ? (input.image.startsWith("http") ? input.image : `${base}${input.image}`) : `${base}/og/site.png`;
@@ -82,7 +95,7 @@ export function pageMeta(input: PageMetaInput): MetaDescriptor[] {
     { tagName: "link", rel: "canonical", href: url },
     { property: "og:site_name", content: SITE.name },
     { property: "og:type", content: input.type ?? "website" },
-    { property: "og:title", content: input.title ?? HOME_TITLE },
+    { property: "og:title", content: input.title ?? homeTitle },
     { property: "og:description", content: description },
     { property: "og:url", content: url },
     { property: "og:image", content: image },
@@ -90,7 +103,7 @@ export function pageMeta(input: PageMetaInput): MetaDescriptor[] {
     { property: "og:image:height", content: "630" },
     { property: "og:locale", content: SITE.locale.replace("-", "_") },
     { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: input.title ?? HOME_TITLE },
+    { name: "twitter:title", content: input.title ?? homeTitle },
     { name: "twitter:description", content: description },
     { name: "twitter:image", content: image },
   ];
@@ -254,13 +267,24 @@ export function reportLd(r: ReportDetail, path: string, description: string) {
   });
 }
 
-/** The event page collects public reports; their publication times do not date the page itself. */
+/** The later of the latest report and, when a digest is shown, when that digest was written. */
+export function storyUpdatedAt(story: StoryDetail): string | undefined {
+  return [story.latestAt, story.digest ? story.digestUpdatedAt : null]
+    .filter((at): at is string => !!at).sort((a, b) => Date.parse(b) - Date.parse(a))[0];
+}
+
+/** The story page's meta description: the visible summary, cut like the description tag. */
+export function storyDescription(story: StoryDetail): string {
+  const text = (story.digest ?? story.summary ?? story.excerpt?.text)?.trim().slice(0, 150).trim();
+  return text ? text : `${story.sourceCount} 个报道来源 ${story.reportCount} 篇报道，完整时间线与最新进展。`;
+}
+
+/** The event page collects public reports; their publication times do not date the collection itself. */
 export function storyLd(story: StoryDetail) {
   const base = siteUrl();
   const url = `${base}/story/${story.publicId}`;
   const description = story.digest ?? story.summary ?? story.excerpt?.text;
-  const updated = [story.latestAt, story.digest ? story.digestUpdatedAt : null]
-    .filter((at): at is string => !!at).sort((a, b) => Date.parse(b) - Date.parse(a))[0];
+  const updated = storyUpdatedAt(story);
   const reports = [...story.timeline].sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
   return {
     "@context": "https://schema.org",
@@ -282,6 +306,25 @@ export function storyLd(story: StoryDetail) {
       },
     } : {}),
   };
+}
+
+/**
+ * The event page as a news article. The headline is the h1, the description matches the meta
+ * description, and the dates are the earliest report and the page's existing update time.
+ * Author and publisher point at this site's Organization.
+ */
+export function storyArticleLd(story: StoryDetail) {
+  const publishedAt = story.firstReportAt;
+  const updated = storyUpdatedAt(story);
+  const modifiedAt = updated && (!publishedAt || Date.parse(updated) >= Date.parse(publishedAt)) ? updated : undefined;
+  return articleLd({
+    path: `/story/${story.publicId}`,
+    headline: story.title,
+    description: storyDescription(story),
+    publishedAt,
+    modifiedAt,
+    image: `/og/stories/${story.publicId}.png`,
+  });
 }
 
 /** A topic page: the collection, when a report last reached it, and the lists its parts show. */

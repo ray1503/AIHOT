@@ -1,6 +1,7 @@
 import { redirect, useLoaderData } from "react-router";
 import type { Route } from "./+types/home";
 import type { TimelineResponse } from "@aihot/contracts/site";
+import { SITE } from "@aihot/site";
 import { cachedPage, loadOr404 } from "../lib/api.server";
 import { pageReuse } from "../lib/page-reuse";
 import { filterParams, hasFeedFilters, itemListLd, listPath, pageMeta, readFilters, siteLd } from "../lib/seo";
@@ -21,7 +22,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (q && q.trim()) throw redirect(`/all${url.search}`);
   const filters = readFilters(url.searchParams);
   const upstream = new Headers();
-  const data = await loadOr404<TimelineResponse>(listPath("/api/site/timeline", filterParams(filters)), { responseHeaders: upstream, signal: request.signal });
+  // The first document carries fewer cards than the API's default page. Scrolling loads the rest.
+  const data = await loadOr404<TimelineResponse>(listPath("/api/site/timeline", { ...filterParams(filters), limit: 10 }), { responseHeaders: upstream, signal: request.signal });
   return cachedPage(60, { data, filters }, upstream);
 }
 
@@ -33,7 +35,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function Home() {
   const { data, filters } = useLoaderData<typeof loader>();
-  const title = filters.tag ? `#${filters.tag}` : "精选";
+  const title = filters.tag ? `#${filters.tag}` : `${SITE.name} · 精选`;
   return (
     <div className="pb-6">
       {/* Phones: the bar (精选 | 全部, filter, search), the filter in use, today's hot topics, the feed. */}
