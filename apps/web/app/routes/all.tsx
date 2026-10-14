@@ -2,11 +2,11 @@ import { useEffect } from "react";
 import { Link, redirect, useLoaderData, useNavigation, useSearchParams } from "react-router";
 import type { Route } from "./+types/all";
 import type { PoolResponse } from "@aihot/contracts/site";
-import { SITE, subjectAfter } from "@aihot/site";
+import { ALL_FILTER_LEAD, SITE, subjectAfter } from "@aihot/site";
 import { beijingTime } from "@aihot/contracts/time";
 import { cachedPage, loadOr404 } from "../lib/api.server";
 import { pageReuse } from "../lib/page-reuse";
-import { filterParams, hasFeedFilters, itemListLd, listPath, pageMeta, readFilters } from "../lib/seo";
+import { filterLanding, filterParams, hasFeedFilters, itemListLd, listPath, pageMeta, readFilters, titled } from "../lib/seo";
 import { ActiveFilters, CategoryTabs, FeedBar, SearchField } from "../features/feed/Filters";
 import { PillTabs } from "../components/ui/Tabs";
 import { DayList, Pagination } from "../features/feed/DayList";
@@ -39,16 +39,29 @@ export async function loader({ request }: Route.LoaderArgs) {
   return cachedPage(60, { data });
 }
 
+const ALL_DESCRIPTION = `${SITE.name} 收录的${subjectAfter("全部", "相关动态")}，可按频道、类别与标签筛选，支持中英文搜索。`;
+
 export function meta({ loaderData }: Route.MetaArgs) {
   const f = loaderData?.data.filters;
   const q = f?.q;
   const page = loaderData?.data.page ?? 1;
   const path = listPath("/all", { ...(f && filterParams(f)), q, tab: q && f?.tab === "relevance" ? "relevance" : null, page: page > 1 ? page : null });
-  const title = `${q ? `搜索：${q}` : ALL_TITLE}${page > 1 ? ` · 第 ${page} 页` : ""}`;
+  const landing = f && !q && !f.tag ? filterLanding(f) : null;
+  const pageBit = page > 1 ? ` · 第 ${page} 页` : "";
+  if (landing) {
+    return pageMeta({
+      title: titled(`${landing.allName} · ${ALL_TITLE}${pageBit}`),
+      rawTitle: true,
+      description: `${ALL_FILTER_LEAD}${landing.description}`,
+      path,
+      noindex: true,
+    });
+  }
+  const title = `${q ? `搜索：${q}` : ALL_TITLE}${pageBit}`;
   const noindex = !!q || hasFeedFilters(f);
   return pageMeta({
     title,
-    description: `${SITE.name} 收录的${subjectAfter("全部", "相关动态")}，可按频道、类别与标签筛选，支持中英文搜索。`,
+    description: ALL_DESCRIPTION,
     path,
     noindex,
     jsonLd: noindex ? undefined : itemListLd(path, title, loaderData?.data.items.map((i) => i.title) ?? []),
@@ -81,7 +94,8 @@ export default function AllPage() {
     else sp.delete("tab");
     return `/all?${sp}`;
   };
-  const title = f.q ? `搜索“${f.q}”` : f.tag ? `#${f.tag}` : null;
+  const landing = !f.q && !f.tag ? filterLanding(f) : null;
+  const title = f.q ? `搜索“${f.q}”` : f.tag ? `#${f.tag}` : landing?.h1 ?? null;
   const updated = beijingTime(data.freshness);
   // Searches are remembered in this browser for the phone search (listed in the privacy notice).
   useEffect(() => {

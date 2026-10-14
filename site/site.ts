@@ -336,6 +336,72 @@ export const PUBLIC_CATEGORIES = {
   feedLabels: {},
 } as const;
 
+/**
+ * 首页和热点榜的唯一标题（页面上的 h1）。浏览器标题和简介仍用 SITE.homeTitle、SITE.description，
+ * 以及热点榜原来的标题，不在这里改。
+ */
+export const HOME_H1 = "能源电力热榜";
+export const HOT_H1 = "电力热点榜";
+
+/**
+ * 精选流（/?category=、/?channel=firstParty）和全部动态里同一筛选的文案。
+ * title 接在「 · 站名」前面，成为文档标题和 og:title；h1 用筛选条上的名字，不写在这里。
+ * allName 只在和 h1 不同时写（全部动态的标题是「allName · 全部…动态 · 站名」）。
+ * description 是这一筛的一句话；全部动态会在前面加上 ALL_FILTER_LEAD。
+ */
+export const ALL_FILTER_LEAD = "在全部电力动态中筛选：";
+export const FILTER_LANDINGS = {
+  firstParty: {
+    title: "一手信源动态",
+    allName: "一手信源",
+    description: "只看官方与权威一手信源的电力动态，覆盖国家能源局、发改委、电网企业等来源的精选摘要与进展。",
+  },
+  policy: {
+    title: "电力政策监管动态",
+    description: "跟踪电力与能源政策、监管例会、规章修订与执法动态，聚合多信源报道并去重摘要。",
+  },
+  market: {
+    title: "电力交易与电价动态",
+    description: "覆盖电力中长期与现货交易、电价机制、绿电绿证与市场监管相关进展的精选动态。",
+  },
+  grid: {
+    title: "电网建设动态",
+    description: "汇总特高压、配电网、电网投资与工程建设进展，便于从业者快速掌握主干网与配网动态。",
+  },
+  "new-energy": {
+    title: "新能源动态",
+    description: "聚焦风电、光伏及新能源消纳相关政策、项目与市场动态的精选资讯。",
+  },
+  "coal-power": {
+    title: "火电动态",
+    description: "跟踪煤电与火电项目、机组与企业经营相关动态，聚合权威与行业信源摘要。",
+  },
+  "nuclear-hydro": {
+    title: "水电动态",
+    description: "覆盖水电大坝安全、流域开发与水电企业相关政策及项目动态。",
+  },
+  nuclear: {
+    title: "核电动态",
+    description: "跟踪核电建造与运行安全监管、机组与产业政策相关动态。",
+  },
+  tech: {
+    title: "电力技术动态",
+    description: "汇总电力系统技术、智能化与装备相关进展的精选动态。",
+  },
+  safety: {
+    title: "电力安全管理动态",
+    description: "覆盖电力安全生产、应急与相关监管要求的动态摘要。",
+  },
+  corporate: {
+    title: "电力项目动态",
+    description: "跟踪发电与电网等电力项目投资、核准、开工与并网进展。",
+  },
+  commentary: {
+    title: "电力评论分析",
+    description: "精选电力与能源行业观点、评论与分析类内容，便于把握舆情与产业判断。",
+  },
+} as const;
+
 /** “AI 日报”这类说法：行业词和名词之间，英文词加空格，中文词不加。 */
 export function withSubject(noun: string): string {
   return /[A-Za-z0-9]$/.test(SITE.subject) ? `${SITE.subject} ${noun}` : `${SITE.subject}${noun}`;
