@@ -171,7 +171,7 @@ export function ApiPanel(props: AgentPanelProps) {
   const { base, tag } = props;
   const userAgent = [ACCESS.userAgent, TAG && tag ? TAG.userAgent(tag) : null].filter(Boolean).join(" ");
   const curl = `curl --compressed${userAgent ? ` -A '${userAgent}'` : ""}`;
-  let pace = `内容多久变一次：新资讯全天陆续进来，精选每天变几次到几十次，日报${EDITION_WHEN.daily}、周报${EDITION_WHEN.weekly}、月报${EDITION_WHEN.monthly}（北京时间）各一期。`;
+  let pace = `内容多久变一次：新资讯全天陆续进来，精选每天变几次到几十次，${REPORT_TITLES.daily}${EDITION_WHEN.daily}、${REPORT_TITLES.weekly}${EDITION_WHEN.weekly}、${REPORT_TITLES.monthly}${EDITION_WHEN.monthly}（北京时间）各一期。`;
   if (ACCESS.ratePerMinute) pace += `同一个 IP 每分钟超过约 ${ACCESS.ratePerMinute} 次会收到 429，请按 Retry-After 等待，不要并发重试。`;
   const [recipe, setRecipe] = useState<string>("latest");
   const recipes = AGENT_PARTS.flatMap((a) => a.recipes ?? []);
@@ -193,7 +193,7 @@ export function ApiPanel(props: AgentPanelProps) {
           items={[
             { title: "开压缩", text: <>curl 加 <Mono>--compressed</Mono>，其他客户端打开 gzip 或 br。JSON 压缩后只有原来的 1/4 到 1/8。</> },
             { title: "带上 ETag", text: <>保存响应里的 ETag，下次带 <Mono>If-None-Match</Mono>；内容没变时返回 304，不传正文。</> },
-            { title: "按节奏取", text: `资讯和热点最快一分钟一次；日报${EDITION_WHEN.daily} 后取一次，周报、月报出刊后取一次；往回翻页翻到已有的那条就停。` },
+            { title: "按节奏取", text: `资讯和热点最快一分钟一次；${REPORT_TITLES.daily}${EDITION_WHEN.daily} 后取一次，${REPORT_TITLES.weekly}、${REPORT_TITLES.monthly}出刊后取一次；往回翻页翻到已有的那条就停。` },
           ]}
         />
         <p className="mt-3 text-[13px] leading-[1.75] text-ink-3">{pace}</p>
@@ -209,17 +209,17 @@ export function ApiPanel(props: AgentPanelProps) {
             { group: "热点与事件" },
             [<Mono>/api/v1/hot-topics</Mono>, "当前热点榜 Top 10", "最快 1 分钟一次"],
             [<Mono>{"/api/v1/stories/{publicId}"}</Mono>, "一个事件的报道时间线、AI 综述和关联事件", "需要时"],
-            { group: "日报" },
-            [<Mono>/api/v1/dailies/latest</Mono>, "最新一期日报", `${EDITION_WHEN.daily} 后一次`],
-            [<Mono>{"/api/v1/dailies/{date}"}</Mono>, "指定日期日报；撤稿会移除引用", "缓存过期后使用前验证 ETag"],
-            [<Mono>/api/v1/dailies</Mono>, "日报日期索引", "每天一次"],
-            { group: "周报与月报" },
-            [<Mono>/api/v1/weeklies/latest</Mono>, "最新一期周报：头条、总述和一周重点，按栏目分好", `${EDITION_WHEN.weekly} 后一次`],
+            { group: REPORT_TITLES.daily },
+            [<Mono>/api/v1/dailies/latest</Mono>, `最新一期${REPORT_TITLES.daily}`, `${EDITION_WHEN.daily} 后一次`],
+            [<Mono>{"/api/v1/dailies/{date}"}</Mono>, `指定日期的${REPORT_TITLES.daily}；撤稿会移除引用`, "缓存过期后使用前验证 ETag"],
+            [<Mono>/api/v1/dailies</Mono>, `${REPORT_TITLES.daily}日期索引`, "每天一次"],
+            { group: `${REPORT_TITLES.weekly}与${REPORT_TITLES.monthly}` },
+            [<Mono>/api/v1/weeklies/latest</Mono>, `最新一期${REPORT_TITLES.weekly}：头条、总述和一周重点，按栏目分好`, `${EDITION_WHEN.weekly} 后一次`],
             [<Mono>{"/api/v1/weeklies/{week}"}</Mono>, "指定一周，ISO 周如 2026-W39；撤稿会移除引用", "缓存过期后使用前验证 ETag"],
-            [<Mono>/api/v1/weeklies</Mono>, "周报索引", "每周一次"],
-            [<Mono>/api/v1/monthlies/latest</Mono>, "最新一期月报", `${EDITION_WHEN.monthly} 后一次`],
+            [<Mono>/api/v1/weeklies</Mono>, `${REPORT_TITLES.weekly}索引`, "每周一次"],
+            [<Mono>/api/v1/monthlies/latest</Mono>, `最新一期${REPORT_TITLES.monthly}`, `${EDITION_WHEN.monthly} 后一次`],
             [<Mono>{"/api/v1/monthlies/{month}"}</Mono>, "指定月份，如 2026-09", "缓存过期后使用前验证 ETag"],
-            [<Mono>/api/v1/monthlies</Mono>, "月报索引", "每月一次"],
+            [<Mono>/api/v1/monthlies</Mono>, `${REPORT_TITLES.monthly}索引`, "每月一次"],
             ...AGENT_PARTS.flatMap((a) => (a.api ? [{ group: a.api.group }, ...a.api.rows.map(([path, does, often]) => [<Mono>{path}</Mono>, does, often])] : [])),
             { group: "给 AI 助手" },
             [<Mono>/api/v1/agent</Mono>, `给 Agent 的使用说明，列出的地址返回整理好的中文 Markdown${GUIDE_CLIENTS ? `；${GUIDE_CLIENTS} 用的就是它们` : ""}`, "需要时"],

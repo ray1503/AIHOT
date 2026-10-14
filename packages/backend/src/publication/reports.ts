@@ -172,11 +172,20 @@ function periodOverview(content: Record<string, any>, kind: "weekly" | "monthly"
   return `${kind === "weekly" ? "本周" : "本月"} ${shown.length} ${REPORTS.entry.measure}${REPORTS.entry.noun}，最受关注的是：${shown.slice(0, 3).map((e) => e.title).join("；")}。`;
 }
 
-/** A weekly or monthly's own headline; the composer's "<site name> 周报 · 2026-W38" names the issue, not its news. */
+/**
+ * A stored issue label, not a news headline: the public report name ("能源电力周报 · 2026-W38"),
+ * or an older composer label ("<site name> 周报 · 2026-W38").
+ */
+export function isComposerIssueTitle(text: string): boolean {
+  if (text.startsWith(`${REPORT_TITLES.weekly} · `) || text.startsWith(`${REPORT_TITLES.monthly} · `)) return true;
+  const rest = text.startsWith(`${SITE.name} `) ? text.slice(SITE.name.length + 1) : "";
+  return /^[周月]报 · /.test(rest);
+}
+
+/** A weekly or monthly's own headline; a composer issue label names the issue, not its news. */
 function periodicHeadline(content: Record<string, any>): string | null {
   const text = String(content.headline ?? content.title ?? "");
-  const issueName = text.startsWith(`${SITE.name} `) && /^[周月]报 · /.test(text.slice(SITE.name.length + 1));
-  return text && !issueName ? text : null;
+  return text && !isComposerIssueTitle(text) ? text : null;
 }
 
 /** Check only the first possible lead of each report; advance reports whose candidate was withdrawn. */
@@ -360,8 +369,10 @@ export async function loadReport(kind: ReportKind, key: string): Promise<ReportD
   const [{ prev, next }, picture] = await Promise.all([neighbors(kind, key), leadItem?.itemId && leadItem.available ? leadCover(leadItem.itemId) : null]);
   const cover = picture && leadItem ? { ...picture, caption: kind === "daily" || c.leadItemId ? null : leadItem.title } : null;
   const headline = kind === "daily" ? null : periodicHeadline(c);
-  const title = kind === "daily" ? `${REPORT_TITLES.daily} · ${key}`
-    : String((hasCitedLead && c.title === headline ? named?.title : c.title) ?? (kind === "weekly" ? `${SITE.name} 周报 · ${key}` : `${SITE.name} 月报 · ${key}`));
+  const issueLabel = `${REPORT_TITLES[kind]} · ${key}`;
+  const storedTitle = typeof c.title === "string" && c.title && !isComposerIssueTitle(c.title) ? c.title : null;
+  const title = kind === "daily" ? issueLabel
+    : String((hasCitedLead && c.title === headline ? named?.title : storedTitle) ?? issueLabel);
   return {
     kind,
     key,

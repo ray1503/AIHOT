@@ -37,7 +37,7 @@
   其他入口暂不开放：它们的返回按钮和页面内入口也需要一起支持，避免只隐藏侧栏、别处仍引导读者过去。
 - `ITEM_COPY`：模型写的那句理由叫什么（`reasonLabel`，默认“推荐理由”），读者在网页和分享图上看不看得到 AI 评分（`showScore`；只管显示，公开 API 和 MCP 照样带分数）。
 - `REPORTS.quiet`：日报时段里有资料经过评判、但没有新大事时的标题与导语；导语中的 `{start}`、`{end}` 会替换为时段起止。
-- `REPORT_WORD`、`REPORT_TITLES`：日报、周报、月报的对外刊名。页面标题、分享标题、读屏标题和报告描述都用它，不从 `subject` 拼接。
+- `REPORT_WORD`、`REPORT_TITLES`：日报、周报、月报的对外刊名。页面标题、分享标题、读屏标题、报告描述、RSS 频道和每期条目标题、`llms.txt`、给 Agent 的说明都用它，不从 `subject` 拼接。`description`、`llmsIntro` 和关于页如果点出刊名，也引用 `REPORT_TITLES`，不要写成「电力日报」。
 - `REPORTS`：日报、周报、月报版面上的说法：报头的出版者一行和旁边的一个词、每种报告页面的描述、一期里的一条怎么称呼（`entry`，默认“件大事”）、报头上其余数字后面的单位、分享图上的条数说法。
 - `ALERTS`、`SOURCE_DEFAULTS`、`COMMUNITY_FEEDS`：告警里随部署而变的说法，后台新建信源时默认展不展示全文，哪些社区站信源按发帖的账号算热度。
 - `ACCESS`：给 Agent 的说明和 `llms.txt` 里的限流说法与建议的 User-Agent；前面的反向代理真的按 IP 限流了，再填 `ratePerMinute`。
