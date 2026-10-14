@@ -110,13 +110,15 @@ export default function AllPage() {
       )}
       <ActiveFilters base="/all" category={f.category} channel={f.channel} tag={f.tag} />
 
-      {/* Desktop, as on 精选: the title, then one filter row with the search field aligned on the right. */}
+      {/* Desktop, as on 精选: the title and search share a line; categories are one scrolling row under them. */}
       <div className="hidden lg:block">
-        <h1 className="text-[24px] font-semibold leading-[1.3] text-ink">{title ?? ALL_TITLE}</h1>
-        <div className="mb-5 mt-4 flex items-start justify-between gap-4">
-          <CategoryTabs base="/all" category={f.category} channel={f.channel} layoutId="all-cat-desk" className="min-w-0 flex-1" />
-          <SearchField defaultValue={f.q ?? ""} keep={keep} />
+        <div className="flex items-center justify-between gap-6">
+          <h1 className="min-w-0 flex-1 text-[24px] font-semibold leading-[1.3] text-ink [overflow-wrap:anywhere]">{title ?? ALL_TITLE}</h1>
+          <div className="w-60 shrink-0">
+            <SearchField defaultValue={f.q ?? ""} keep={keep} />
+          </div>
         </div>
+        <CategoryTabs base="/all" category={f.category} channel={f.channel} layoutId="all-cat-desk" className="mb-5 mt-4 min-w-0" />
       </div>
 
       {f.q && (
