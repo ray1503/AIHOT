@@ -12,6 +12,7 @@ import { sql } from "../db.ts";
 import { cached, SHARED_ONLY } from "../lib/cache.ts";
 import { escapeXml } from "../lib/text.ts";
 import { siteUrl } from "./links.ts";
+import { placeholderKeys } from "./report-shell.ts";
 import { evidenceCondition, listedCondition, selectedCondition, storyReportCondition } from "./scope.ts";
 import { topicPageCounts } from "./topics.ts";
 import { serverModules, type SitemapEntry } from "../modules.ts";
@@ -40,17 +41,23 @@ export async function loadDiscoveryEntries(at = new Date(), limits?: { stories: 
            md5(string_agg(p.article_id || ':' || p.revision::text, ',' ORDER BY p.timeline_at DESC, p.article_id)
              FILTER (WHERE ${listedCondition(at)})) AS listed
     FROM publications p WHERE ${listedCondition(at)}`;
-  const reports = await sql<{ kind: string; key: string; t: Date | null; revision: string }[]>`
-    SELECT r.kind, r.key,
-      CASE WHEN citations.revision IS NULL THEN greatest(r.updated_at, r.generated_at) END AS t,
-      md5(concat_ws('|', r.revision::text, r.updated_at::text, citations.revision)) AS revision
-    FROM reports r LEFT JOIN LATERAL (
-      SELECT md5(string_agg(p.article_id || ':' || p.revision::text || ':' || (${listedCondition(at)})::text,
-          ',' ORDER BY p.article_id)) AS revision
-      FROM publications p WHERE p.article_id IN (
-        SELECT value #>> '{}' FROM jsonb_path_query(r.content, '$.**.itemId') AS cited(value))
-    ) citations ON true ORDER BY r.kind, r.key DESC`;
-  const reportRevision = (kind: string) => sha256(stableJson(reports.filter((r) => r.kind === kind)));
+  const [reports, weeklyShells, monthlyShells] = await Promise.all([
+    sql<{ kind: string; key: string; t: Date | null; revision: string }[]>`
+      SELECT r.kind, r.key,
+        CASE WHEN citations.revision IS NULL THEN greatest(r.updated_at, r.generated_at) END AS t,
+        md5(concat_ws('|', r.revision::text, r.updated_at::text, citations.revision)) AS revision
+      FROM reports r LEFT JOIN LATERAL (
+        SELECT md5(string_agg(p.article_id || ':' || p.revision::text || ':' || (${listedCondition(at)})::text,
+            ',' ORDER BY p.article_id)) AS revision
+        FROM publications p WHERE p.article_id IN (
+          SELECT value #>> '{}' FROM jsonb_path_query(r.content, '$.**.itemId') AS cited(value))
+      ) citations ON true ORDER BY r.kind, r.key DESC`,
+    placeholderKeys("weekly"),
+    placeholderKeys("monthly"),
+  ]);
+  const placeholder = new Set([...weeklyShells.map((key) => `weekly/${key}`), ...monthlyShells.map((key) => `monthly/${key}`)]);
+  const visibleReports = reports.filter((r) => !placeholder.has(`${r.kind}/${r.key}`));
+  const reportRevision = (kind: string) => sha256(stableJson(visibleReports.filter((r) => r.kind === kind)));
   const topics = await topicPageCounts(at, !limits);
   entries.push(
     { loc: "/", revision: activity?.selected ?? "", changefreq: "hourly", priority: 1 },
@@ -68,7 +75,7 @@ export async function loadDiscoveryEntries(at = new Date(), limits?: { stories: 
     { loc: "/privacy", revision: sha256(stableJson([POLICY.privacy, await readFile(path.join(REPO_ROOT, "site/pages/privacy.md"), "utf8")])), changefreq: "monthly", priority: 0.4 },
     { loc: "/changelog", revision: sha256(stableJson(loadChangelog())), changefreq: "weekly", priority: 0.5 },
   );
-  for (const r of reports) entries.push({ loc: `/${r.kind}/${r.key}`, lastmod: r.t, revision: r.revision, changefreq: "monthly", priority: 0.6 });
+  for (const r of visibleReports) entries.push({ loc: `/${r.kind}/${r.key}`, lastmod: r.t, revision: r.revision, changefreq: "monthly", priority: 0.6 });
   for (const t of topics) {
     if (!t.indexable) continue;
     entries.push({ loc: `/topics/${t.slug}`, revision: t.revision, changefreq: "daily", priority: 0.6 });

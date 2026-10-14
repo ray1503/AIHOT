@@ -7,6 +7,7 @@ import { siteUrl } from "./links.ts";
 import { sql } from "../db.ts";
 import { serverModules, type LlmsLines } from "../modules.ts";
 import { feedMeta } from "./feeds.ts";
+import { hidePlaceholderKeys, placeholderKeys } from "./report-shell.ts";
 import { TOPIC_GROUPS, TOPICS, topicPageCounts } from "./topics.ts";
 
 /**
@@ -14,11 +15,12 @@ import { TOPIC_GROUPS, TOPICS, topicPageCounts } from "./topics.ts";
  * indexed; and what the site's modules add.
  */
 export async function loadLlmsAvailability() {
+  const [weeklyShells, monthlyShells] = await Promise.all([placeholderKeys("weekly"), placeholderKeys("monthly")]);
   const [[row], counts, extra] = await Promise.all([
     sql<{ hasDailies: boolean; hasWeekly: boolean; hasMonthly: boolean }[]>`
       SELECT EXISTS (SELECT 1 FROM reports WHERE kind = 'daily') AS "hasDailies",
-             EXISTS (SELECT 1 FROM reports WHERE kind = 'weekly') AS "hasWeekly",
-             EXISTS (SELECT 1 FROM reports WHERE kind = 'monthly') AS "hasMonthly"`,
+             EXISTS (SELECT 1 FROM reports WHERE kind = 'weekly' ${hidePlaceholderKeys(sql`key`, weeklyShells)}) AS "hasWeekly",
+             EXISTS (SELECT 1 FROM reports WHERE kind = 'monthly' ${hidePlaceholderKeys(sql`key`, monthlyShells)}) AS "hasMonthly"`,
     topicPageCounts(new Date()),
     Promise.all(serverModules().map(async (m) => (await m.llms?.()) ?? {})),
   ]);

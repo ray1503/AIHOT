@@ -1,11 +1,12 @@
 import { data, useLoaderData } from "react-router";
 import type { Route } from "./+types/report-detail";
 import type { ReportDetail, ReportNavigationResponse, ReportKind } from "@aihot/contracts/site";
-import { REPORT_TITLES, SITE } from "@aihot/site";
+import { periodShellCopy, REPORT_TITLES, SITE } from "@aihot/site";
 import { apiGet, cachedPage, loadOr404 } from "../lib/api.server";
 import { pageReuse } from "../lib/page-reuse";
 import { pageMeta, reportLd, reportTitle, titled } from "../lib/seo";
 import { beijingDate } from "@aihot/contracts/time";
+import { EmptyState } from "../components/ui/Page";
 import { ReportLayout } from "../features/report/ReportLayout";
 import { ReportPaper, reportOutline } from "../features/report/ReportPaper";
 import { feedLink, kindFromPath } from "../features/report/format";
@@ -35,8 +36,18 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [{ title: titled("报告不存在") }, { name: "robots", content: "noindex" }];
   const r = loaderData.report;
-  const description = r.lead?.leadParagraph ?? r.overview?.slice(0, 150) ?? `${SITE.name} ${r.key} 的${REPORT_TITLES[r.kind]}。`;
   const path = `/${r.kind}/${r.key}`;
+  if (r.shell && r.kind !== "daily") {
+    const copy = periodShellCopy(r.kind);
+    return [...pageMeta({
+      title: `${REPORT_TITLES[r.kind]} ${r.key}`,
+      description: copy.paragraph,
+      path,
+      image: `/og/pages/${r.kind}.png`,
+      noindex: true,
+    }), feedLink(r.kind)];
+  }
+  const description = r.lead?.leadParagraph ?? r.overview?.slice(0, 150) ?? `${SITE.name} ${r.key} 的${REPORT_TITLES[r.kind]}。`;
   return [...pageMeta({
     title: reportTitle(r),
     description,
@@ -49,6 +60,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function ReportDetailPage() {
   const { report, index, today } = useLoaderData<typeof loader>();
+  if (report.shell && report.kind !== "daily") {
+    const copy = periodShellCopy(report.kind);
+    return (
+      <ReportLayout kind={report.kind} index={index} current={null} today={today}>
+        <EmptyState title={copy.title}>{copy.paragraph}</EmptyState>
+      </ReportLayout>
+    );
+  }
   return (
     <ReportLayout kind={report.kind} index={index} current={report.key} today={today} outline={reportOutline(report)}>
       <ReportPaper report={report} index={index} />
