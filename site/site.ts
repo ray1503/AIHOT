@@ -269,7 +269,8 @@ export const COMMUNITY_FEEDS: { dev: string[]; hn: string[] } = {
 
 /** 各页分享图（/og/pages/*.png）上的文字。主题目录页的那张按主题数自动生成。 */
 export const CARDS: Record<string, { kicker: string; title: string; subtitle: string; accent?: "hot" | "amber" }> = {
-  site: { kicker: subjectAfter("每日", "精选"), title: SITE.tagline, subtitle: SITE.description },
+  // 一行小字没写时用站名。标题空着会让绘图抛错，/og/site.png 变成 503。
+  site: { kicker: subjectAfter("每日", "精选"), title: SITE.tagline || SITE.name, subtitle: SITE.description },
   all: { kicker: subjectAfter("全部", "动态"), title: "所有信源的最新动态，一站看完", subtitle: "按时间汇总各信源的最新动态，可按类别与标签筛选。" },
   hot: { kicker: "热点榜", title: "过去 48 小时，大家在讨论什么", subtitle: "热度指数、趋势与组成热度的公开来源。", accent: "hot" },
   daily: { kicker: REPORT_TITLES.daily, title: `每天 ${spokenTime(EDITION_TIMES.daily)}，一份读得完的${REPORT_TITLES.daily}`, subtitle: `${subjectAfter("前一天值得关注的", "动态")}。` },

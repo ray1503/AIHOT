@@ -166,12 +166,21 @@ async function render(file: string, size: { width: number; height: number }, tre
   return png;
 }
 
+/**
+ * A missing title throws inside `clamp`, and the share route then answers 503 with no-store. The site
+ * name is always set, so a card whose tagline was never filled still draws.
+ */
+function withTitle(card: OgCard): OgCard {
+  return card.title ? card : { ...card, title: SITE.name };
+}
+
 export function ogEtag(card: OgCard): string {
-  return createHash("sha256").update(OG_TEMPLATE_VERSION).update(JSON.stringify(card)).digest("hex").slice(0, 24);
+  return createHash("sha256").update(OG_TEMPLATE_VERSION).update(JSON.stringify(withTitle(card))).digest("hex").slice(0, 24);
 }
 
 /** PNG bytes for a card, from the disk cache when this exact card was rendered before. */
 export async function renderOg(card: OgCard): Promise<{ png: Buffer; etag: string }> {
-  const etag = ogEtag(card);
-  return { png: await renderPng(etag, { width: WIDTH, height: HEIGHT }, () => tree(card)), etag };
+  const ready = withTitle(card);
+  const etag = ogEtag(ready);
+  return { png: await renderPng(etag, { width: WIDTH, height: HEIGHT }, () => tree(ready)), etag };
 }
