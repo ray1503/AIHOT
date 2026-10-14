@@ -1,5 +1,5 @@
-// Generates the report nameplates (site/brand/nameplates/*.svg and index.json): the subject word
-// from site/site.ts (in the accent) and the Chinese title, set solid in Noto Sans SC Black
+// Generates the report nameplates (site/brand/nameplates/*.svg and index.json): the report word
+// from site/site.ts (REPORT_WORD, in the accent) and the Chinese title, set solid in Noto Sans SC Black
 // (SIL OFL 1.1) as SVG paths, so the nameplate is one static logotype on every system. The Latin
 // capitals are scaled to stand as tall as the Chinese glyphs, both centred on one line, and the spacing
 // is set by ink, pair by pair.
@@ -9,7 +9,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import opentype from "opentype.js";
-import { SITE } from "@aihot/site";
+import { REPORT_WORD } from "@aihot/site";
 
 const pkg = process.argv[2];
 if (!pkg) throw new Error("usage: node scripts/nameplates.ts <noto-sans-sc package dir>");
@@ -27,7 +27,7 @@ function gap(a: string, b: string): number {
   return H * 0.085;
 }
 
-const S = SITE.subject;
+const S = REPORT_WORD;
 const NAMEPLATES: Record<string, Array<{ text: string; accent: boolean }>> = {
   daily: [
     { text: S, accent: true },

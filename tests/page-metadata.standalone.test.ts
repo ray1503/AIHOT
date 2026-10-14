@@ -10,7 +10,7 @@ import { createServer } from "node:http";
 import { after, before, test } from "node:test";
 import * as cheerio from "cheerio";
 import type { FeedItemSummary, ReportCitation, ReportDetail, ReportKind, SiteItemDetail, StoryDetail } from "@aihot/contracts/site";
-import { SITE, withSubject } from "@aihot/site";
+import { REPORT_TITLES, REPORTS, SITE } from "@aihot/site";
 import { articleLd, readFilters, reportLd } from "../apps/web/app/lib/seo.ts";
 import { startWebServer, type WebServer } from "../apps/web/tests/web-server.ts";
 
@@ -79,16 +79,23 @@ for (const [kind, label] of [["daily", "日报"], ["weekly", "周报"], ["monthl
   test(`${kind} issue metadata describes its visible lead while the permanent entry keeps its title`, async () => {
     const r = report(kind);
     const $ = await page(`/${kind}/${r.key}`);
-    const title = `${withSubject(label)} ${r.key}：${r.lead!.title}`;
+    assert.equal(REPORT_TITLES[kind], `能源电力${label}`);
+    const title = `${REPORT_TITLES[kind]} ${r.key}：${r.lead!.title}`;
     assert.equal($("title").text(), `${title} · ${SITE.name}`);
     assert.equal($("meta[property='og:title']").attr("content"), title);
+    assert.ok($("#report-start .sr-only").text().startsWith(REPORT_TITLES[kind]));
     assert.ok($("main").text().includes(r.lead!.title));
     const article = structured($).find((entry) => entry["@type"] === "NewsArticle")!;
     assert.equal(article.headline, title);
     assert.equal(article.image, `${web.origin}/og/reports/${kind}/${r.key}.png`);
     assert.equal("dateModified" in article, false);
     const latest = await page(`/${kind}`);
-    assert.equal(latest("title").text(), `${withSubject(label)} · ${SITE.name}`);
+    assert.equal(latest("title").text(), `${REPORT_TITLES[kind]} · ${SITE.name}`);
+    assert.equal(latest("meta[property='og:title']").attr("content"), REPORT_TITLES[kind]);
+    assert.equal(latest("meta[name=description]").attr("content"), `${REPORTS.descriptions[kind]}。`);
+    assert.match(REPORTS.descriptions.daily, /发布的能源电力行业精编日报/);
+    assert.doesNotMatch(REPORTS.descriptions.daily, /发布的电力行业精编日报/);
+    assert.ok(latest("#report-start .sr-only").text().includes(REPORT_TITLES[kind]));
   });
 }
 

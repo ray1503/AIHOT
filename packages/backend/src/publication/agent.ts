@@ -2,7 +2,7 @@
 // ability. Agents only fetch these addresses and relay what comes back, so which data answers a
 // question, how it reads and what to tell the user are decided here, on the server. Programs keep
 // reading the v1 JSON, whose fields do not change.
-import { ACCESS, EDITION_WHEN, ITEM_COPY, POLICY, SITE, subjectAfter } from "@aihot/site";
+import { ACCESS, EDITION_WHEN, ITEM_COPY, POLICY, REPORT_TITLES, SITE, subjectAfter } from "@aihot/site";
 import { CATEGORIES } from "@aihot/industry/taxonomy";
 import { MCP_TOOL_NAMES as T } from "@aihot/contracts/mcp";
 import { CATEGORY_LABELS, isCategoryKey, PUBLIC_API_CATEGORY_KEYS, toPublicApiCategory, type PublicApiCategoryKey } from "@aihot/contracts/taxonomy";
@@ -188,7 +188,7 @@ export function dailyAnswer(r: DailyReport, via: Via, notes: Map<string, DailyNo
     data.push("【快讯】", ...r.flashes.map((f) => `- ${stamp(f.publishedAt)} · [${linkText(f.title)}](${f.links.aihot ?? f.links.original}) · ${publicSourceName(f.source.name)}`), "");
   }
   return answer([
-    `# ${SITE.name} 日报 · ${r.date}（${beijingWeekday(r.date)}）`,
+    `# ${REPORT_TITLES.daily} · ${r.date}（${beijingWeekday(r.date)}）`,
     "",
     `收录北京时间 ${stamp(r.windowStart)} 至 ${stamp(r.windowEnd)} 的动态，${EDITION_WHEN.daily} 发布。日报页：${r.links.aihot}`,
     ...(data.length ? [] : ["这一期暂时没有可以展示的条目。"]),
@@ -236,7 +236,7 @@ export function periodAnswer(r: PeriodReport, kind: "weekly" | "monthly", via: V
     ? `请求 ${kind === "weekly" ? agentUrl("/weekly/YYYY-Www") : agentUrl("/monthly/YYYY-MM")}（真实的${form}）`
     : `传 ${kind === "weekly" ? "week=YYYY-Www" : "month=YYYY-MM"}（真实的${form}）`;
   return answer([
-    `# ${SITE.name} ${name} · ${key}`,
+    `# ${REPORT_TITLES[kind]} · ${key}`,
     "",
     `从${days}的日报里选出的重点，${EDITION_WHEN[kind]}（北京时间）发布。${name}页：${r.links.aihot}`,
     ...(data.length ? [] : ["这一期暂时没有可以展示的条目。"]),
@@ -285,7 +285,7 @@ export function agentGuide(): string {
     `| 某家公司、产品、模型、人物或话题 | ${u("/search?q=关键词")}（最近 7 天；只看今天加 window=24h） |`,
     `| 现在最热、大家在讨论什么 | ${u("/hot")} |`,
     "| 某个热点的来龙去脉、后续进展 | 热点结果里每个事件的「来龙去脉」地址 |",
-    `| ${SITE.name} 日报 | ${u("/daily")}（最新一期）；指定日期：${u("/daily/2026-09-30")} |`,
+    `| ${REPORT_TITLES.daily} | ${u("/daily")}（最新一期）；指定日期：${u("/daily/2026-09-30")} |`,
     `| 这一周、这个月的重点（周报、月报） | ${u("/weekly")}、${u("/monthly")}（最新一期）；指定一期：${u("/weekly/2026-W39")}、${u("/monthly/2026-09")} |`,
     ...abilities.map((a) => `| ${a.ask} | ${u(a.path)} |`),
     "",
