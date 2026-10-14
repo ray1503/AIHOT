@@ -2,7 +2,7 @@
 import { PUBLIC_INTERFACE_VERSION } from "@aihot/contracts/http-policy";
 import { MCP_TOOL_NAMES as T, MCP_TOOLS, mcpToolName } from "@aihot/contracts/mcp";
 import { PUBLIC_API_CATEGORY_KEYS } from "@aihot/contracts/taxonomy";
-import { ACCESS, EDITION_WHEN, POLICY, REPORTS, SITE, subjectAfter, withSubject } from "@aihot/site";
+import { ACCESS, EDITION_WHEN, POLICY, REPORT_TITLES, REPORT_WORD, REPORTS, SITE, subjectAfter, withSubject } from "@aihot/site";
 import { siteUrl } from "./links.ts";
 import { sql } from "../db.ts";
 import { serverModules, type LlmsLines } from "../modules.ts";
@@ -113,11 +113,11 @@ export function llmsTxt(opts: {
   lines.push(`- [${withSubject("热点榜")}](${u("/hot")}): 过去 48 小时内被多个独立信源${subjectAfter("共同讨论的", "事件")}；可进入事件页查看最新进展、热度变化、报道时间线和 AI 综述`);
   lines.push(`- [全部动态](${u("/all")}): ${subjectAfter("全量", "资讯流")}，可按分类筛选`);
   if (opts.hasDailies) {
-    lines.push(`- [${withSubject("日报")}](${u("/daily")}): ${subjectAfter("每日", "行业精编汇总")}`);
-    lines.push(`- [日报存档](${u("/daily/archive")}): ${subjectAfter("历史", "日报归档")}`);
+    lines.push(`- [${REPORT_TITLES.daily}](${u("/daily")}): 每日${REPORT_WORD}行业精编汇总`);
+    lines.push(`- [${REPORT_TITLES.daily}存档](${u("/daily/archive")}): 历史${REPORT_TITLES.daily}归档`);
   }
-  if (opts.hasWeekly) lines.push(`- [${withSubject("周报")}](${u("/weekly")}): ${REPORTS.descriptions.weekly}（含往期）；也可用 /api/v1/weeklies、给 Agent 的 /api/v1/agent/weekly、MCP 工具 ${T.weekly} 读取，或用 /feed/weekly.xml 订阅`);
-  if (opts.hasMonthly) lines.push(`- [${withSubject("月报")}](${u("/monthly")}): ${REPORTS.descriptions.monthly}（含往期）；也可用 /api/v1/monthlies、给 Agent 的 /api/v1/agent/monthly、MCP 工具 ${T.monthly} 读取，或用 /feed/monthly.xml 订阅`);
+  if (opts.hasWeekly) lines.push(`- [${REPORT_TITLES.weekly}](${u("/weekly")}): ${REPORTS.descriptions.weekly}（含往期）；也可用 /api/v1/weeklies、给 Agent 的 /api/v1/agent/weekly、MCP 工具 ${T.weekly} 读取，或用 /feed/weekly.xml 订阅`);
+  if (opts.hasMonthly) lines.push(`- [${REPORT_TITLES.monthly}](${u("/monthly")}): ${REPORTS.descriptions.monthly}（含往期）；也可用 /api/v1/monthlies、给 Agent 的 /api/v1/agent/monthly、MCP 工具 ${T.monthly} 读取，或用 /feed/monthly.xml 订阅`);
   lines.push(`- [主题](${u("/topics")}): 按${TOPIC_GROUPS.map((g) => g.name).join("、")}${subjectAfter("追踪", "最新动态")}${opts.topics.length ? `（${opts.topics.length} 个主题，下一节逐个列出）` : ""}`);
   lines.push(...opts.modules.pages);
   if (opts.topics.length) {

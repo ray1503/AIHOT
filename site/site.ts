@@ -20,8 +20,8 @@ export const SITE = {
   /** 站名：导航、页面标题、分享图、RSS、MCP、后台都用它。 */
   name: "MyHOT",
   /**
-   * 行业词：拼进默认说法里，比如“AI 日报”“AI 动态”。
-   * 改成“法律”“HR”“黄金”之类，页面上就会变成“法律日报”“法律动态”。
+   * 行业词：拼进「全部 AI 动态」这类说法。改成「法律」「HR」「黄金」，页面上就是「全部法律动态」。
+   * 日报、周报、月报的刊名不从这里拼，见 REPORT_WORD。
    */
   subject: "AI",
   /** 首页的完整标题（浏览器标签、搜索结果）。 */
@@ -188,6 +188,19 @@ export const AGENT = {
   search: { scope: "按公司、产品、人物或话题搜最近 7 天", ask: "这家公司最近发了什么？" },
 };
 
+/**
+ * 日报、周报、月报对外刊名里的词。可以比 subject 更完整：subject 仍是「电力」这类短行业词
+ * （「全部电力动态」），报头和页面标题写「能源电力日报」。
+ */
+export const REPORT_WORD = "能源电力";
+
+/** 三种刊的对外名字，和报头 SVG 一致。 */
+export const REPORT_TITLES = {
+  daily: `${REPORT_WORD}日报`,
+  weekly: `${REPORT_WORD}周报`,
+  monthly: `${REPORT_WORD}月报`,
+} as const;
+
 /** 日报、周报、月报版面上的说法。 */
 export const REPORTS = {
   /** 报头下面的出版者一行。 */
@@ -196,9 +209,9 @@ export const REPORTS = {
   motto: SITE.subject as string,
   /** 每种报告页面的描述（搜索结果、分享卡片），不带句号；llms.txt 介绍周报、月报时也用它。 */
   descriptions: {
-    daily: `${SITE.name} ${subjectAfter(`${EDITION_WHEN.daily}（北京时间）发布的`, "行业精编日报")}`,
-    weekly: subjectAfter("每周", "行业综合回顾"),
-    monthly: subjectAfter("每月", "行业盘点"),
+    daily: `${SITE.name} ${EDITION_WHEN.daily}（北京时间）发布的${REPORT_WORD}行业精编日报`,
+    weekly: `每周${REPORT_WORD}行业综合回顾`,
+    monthly: `每月${REPORT_WORD}行业盘点`,
   },
   /**
    * 一期里的一条怎么称呼（“4 件大事”）：没有头条时的标题（“这一天的 4 件 AI 大事”）、报头和往期目录的条数、
@@ -243,9 +256,9 @@ export const CARDS: Record<string, { kicker: string; title: string; subtitle: st
   site: { kicker: subjectAfter("每日", "精选"), title: SITE.tagline, subtitle: SITE.description },
   all: { kicker: subjectAfter("全部", "动态"), title: "所有信源的最新动态，一站看完", subtitle: "按时间汇总各信源的最新动态，可按类别与标签筛选。" },
   hot: { kicker: "热点榜", title: "过去 48 小时，大家在讨论什么", subtitle: "热度指数、趋势与组成热度的公开来源。", accent: "hot" },
-  daily: { kicker: withSubject("日报"), title: subjectAfter(`每天 ${spokenTime(EDITION_TIMES.daily)}，一份读得完的`, "日报"), subtitle: `${subjectAfter("前一天值得关注的", "动态")}。` },
-  weekly: { kicker: withSubject("周报"), title: `一周${REPORTS.entry.noun}，一次看清`, subtitle: "本周的主线、重要发布与值得回看的讨论。" },
-  monthly: { kicker: withSubject("月报"), title: "一个月的变化", subtitle: "月度主线与关键事件回顾。" },
+  daily: { kicker: REPORT_TITLES.daily, title: `每天 ${spokenTime(EDITION_TIMES.daily)}，一份读得完的${REPORT_TITLES.daily}`, subtitle: `${subjectAfter("前一天值得关注的", "动态")}。` },
+  weekly: { kicker: REPORT_TITLES.weekly, title: `一周${REPORTS.entry.noun}，一次看清`, subtitle: "本周的主线、重要发布与值得回看的讨论。" },
+  monthly: { kicker: REPORT_TITLES.monthly, title: "一个月的变化", subtitle: "月度主线与关键事件回顾。" },
   about: { kicker: "关于", title: `关于 ${SITE.name}`, subtitle: SITE.description },
   terms: { kicker: "使用规则", title: `${SITE.name} 使用规则`, subtitle: "网页、API、RSS 与 MCP 的使用范围。" },
   privacy: { kicker: "隐私说明", title: `${SITE.name} 隐私说明`, subtitle: "访问日志、浏览器本地数据与反馈资料的处理方式。" },
