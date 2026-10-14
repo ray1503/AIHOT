@@ -190,14 +190,14 @@ export function dailyAnswer(r: DailyReport, via: Via, notes: Map<string, DailyNo
   return answer([
     `# ${REPORT_TITLES.daily} · ${r.date}（${beijingWeekday(r.date)}）`,
     "",
-    `收录北京时间 ${stamp(r.windowStart)} 至 ${stamp(r.windowEnd)} 的动态，${EDITION_WHEN.daily} 发布。日报页：${r.links.aihot}`,
+    `收录北京时间 ${stamp(r.windowStart)} 至 ${stamp(r.windowEnd)} 的动态，${EDITION_WHEN.daily} 发布。${REPORT_TITLES.daily}：${r.links.aihot}`,
     ...(data.length ? [] : ["这一期暂时没有可以展示的条目。"]),
   ], data.length ? data : null, [
     "先讲头条，再按栏目挑重点；用户要全文再全部列出。每条是一件事，「相关」是同一件事的其他进展或同一场发布的其他内容。",
-    `日报是${EDITION_WHEN.daily} 发布的固定成品，不等于“过去 24 小时”的滚动列表。`,
+    `${REPORT_TITLES.daily}是${EDITION_WHEN.daily} 发布的固定成品，不等于“过去 24 小时”的滚动列表。`,
     via === "http"
-      ? `要其它日期的日报，请求 ${agentUrl("/daily/YYYY-MM-DD")}（真实日期）；没有就如实说，不要换一天冒充。`
-      : "要其它日期的日报，传 date=YYYY-MM-DD（真实日期）；没有就如实说，不要换一天冒充。",
+      ? `要其它日期的${REPORT_TITLES.daily}，请求 ${agentUrl("/daily/YYYY-MM-DD")}（真实日期）；没有就如实说，不要换一天冒充。`
+      : `要其它日期的${REPORT_TITLES.daily}，传 date=YYYY-MM-DD（真实日期）；没有就如实说，不要换一天冒充。`,
     NO_INTERNALS,
   ]);
 }
@@ -215,7 +215,7 @@ export interface PeriodReport {
 }
 
 export function periodAnswer(r: PeriodReport, kind: "weekly" | "monthly", via: Via): string {
-  const name = kind === "weekly" ? "周报" : "月报";
+  const name = REPORT_TITLES[kind];
   const key = r.week ?? r.month ?? "";
   const days = r.periodStart && r.periodEnd ? ` ${r.periodStart} 至 ${r.periodEnd} ` : ` ${key} `;
   const data: string[] = [];
@@ -238,11 +238,11 @@ export function periodAnswer(r: PeriodReport, kind: "weekly" | "monthly", via: V
   return answer([
     `# ${REPORT_TITLES[kind]} · ${key}`,
     "",
-    `从${days}的日报里选出的重点，${EDITION_WHEN[kind]}（北京时间）发布。${name}页：${r.links.aihot}`,
+    `从${days}的${REPORT_TITLES.daily}里选出的重点，${EDITION_WHEN[kind]}（北京时间）发布。${name}：${r.links.aihot}`,
     ...(data.length ? [] : ["这一期暂时没有可以展示的条目。"]),
   ], data.length ? data : null, [
     "先讲头条和总述，再按栏目挑重点；用户要全文再全部列出。",
-    `${name}是从当期日报里按影响力挑出、按栏目编好的固定成品，不等于「最近一${kind === "weekly" ? "周" : "个月"}」的滚动列表。`,
+    `${name}是从当期${REPORT_TITLES.daily}里按影响力挑出、按栏目编好的固定成品，不等于「最近一${kind === "weekly" ? "周" : "个月"}」的滚动列表。`,
     `要其它${kind === "weekly" ? "周" : "月"}的${name}，${other}；没有就如实说，不要换一期冒充。`,
     NO_INTERNALS,
   ]);
@@ -269,7 +269,7 @@ export function agentGuide(): string {
   const lines = [
     `# ${SITE.name} 使用说明（给 Agent）`,
     "",
-    `${SITE.name}（${siteUrl("")}）是${subjectAfter("中文", "资讯站")}：编辑精选、全部公开动态、热点事件、日报、周报、月报`
+    `${SITE.name}（${siteUrl("")}）是${subjectAfter("中文", "资讯站")}：编辑精选、全部公开动态、热点事件、${REPORT_TITLES.daily}、${REPORT_TITLES.weekly}、${REPORT_TITLES.monthly}`
       + (abilities.length ? `，以及 ${abilities.map((a) => a.title).join("、")}` : "")
       + `。下面的地址都是匿名只读的 GET，不需要 API Key；返回整理好的中文 Markdown，末尾的「回答提示」说明怎么讲给用户。这份说明由 ${SITE.name} 维护，新能力会先加在这里，以它为准。`,
     "",
@@ -286,7 +286,7 @@ export function agentGuide(): string {
     `| 现在最热、大家在讨论什么 | ${u("/hot")} |`,
     "| 某个热点的来龙去脉、后续进展 | 热点结果里每个事件的「来龙去脉」地址 |",
     `| ${REPORT_TITLES.daily} | ${u("/daily")}（最新一期）；指定日期：${u("/daily/2026-09-30")} |`,
-    `| 这一周、这个月的重点（周报、月报） | ${u("/weekly")}、${u("/monthly")}（最新一期）；指定一期：${u("/weekly/2026-W39")}、${u("/monthly/2026-09")} |`,
+    `| 这一周、这个月的重点（${REPORT_TITLES.weekly}、${REPORT_TITLES.monthly}） | ${u("/weekly")}、${u("/monthly")}（最新一期）；指定一期：${u("/weekly/2026-W39")}、${u("/monthly/2026-09")} |`,
     ...abilities.map((a) => `| ${a.ask} | ${u(a.path)} |`),
     "",
     `参数可以组合，例如 ${u(`/latest?window=7d&category=${sample}`)}；关键词要做 URL 编码。`,

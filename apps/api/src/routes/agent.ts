@@ -2,6 +2,7 @@
 // errors are the usual v1 Problem JSON. New abilities become new addresses listed in the guide, which
 // agents read without updating.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { REPORT_TITLES } from "@aihot/site";
 import { PUBLIC_API_CATEGORY_KEYS, type PublicApiCategoryKey } from "@aihot/contracts/taxonomy";
 import { isValidDate } from "@aihot/contracts/time";
 import { agentGuide, dailyAnswer, hotAnswer, latestAnswer, periodAnswer, searchAnswer, searchItems, storyAnswer } from "@aihot/backend/publication/agent";
@@ -70,7 +71,7 @@ export function registerAgent(app: FastifyInstance) {
   app.get("/api/v1/agent/daily", publicHandler(async (req, reply) => {
     strictQuery(req, []);
     const res = await dailyWithNotes("latest");
-    if (!res) return sendProblem(req, reply, { status: 404, code: "not_found", detail: "还没有发布过日报。" });
+    if (!res) return sendProblem(req, reply, { status: 404, code: "not_found", detail: `还没有发布过${REPORT_TITLES.daily}。` });
     return markdown(req, reply, dailyAnswer(res.body.report, "http", res.notes), "agent-daily", V1_OPERATIONS.latestDaily.cacheControl);
   }));
 
@@ -79,13 +80,13 @@ export function registerAgent(app: FastifyInstance) {
     const date = (req.params as { date: string }).date;
     if (!isValidDate(date)) throw new QueryError("date must be a real YYYY-MM-DD calendar date.");
     const res = await dailyWithNotes(date);
-    if (!res) return sendProblem(req, reply, { status: 404, code: "not_found", detail: `没有 ${date} 的日报；不要换一天冒充。`, cacheControl: "public, max-age=60" });
+    if (!res) return sendProblem(req, reply, { status: 404, code: "not_found", detail: `没有 ${date} 的${REPORT_TITLES.daily}；不要换一天冒充。`, cacheControl: "public, max-age=60" });
     return markdown(req, reply, dailyAnswer(res.body.report, "http", res.notes), "agent-daily", V1_OPERATIONS.dailyByDate.cacheControl);
   }));
 
   for (const p of [
-    { kind: "weekly", name: "周报", param: "week", form: "a real ISO week such as 2026-W39", latest: V1_OPERATIONS.latestWeekly.cacheControl, byKey: V1_OPERATIONS.weeklyByWeek.cacheControl },
-    { kind: "monthly", name: "月报", param: "month", form: "a real month such as 2026-09", latest: V1_OPERATIONS.latestMonthly.cacheControl, byKey: V1_OPERATIONS.monthlyByMonth.cacheControl },
+    { kind: "weekly", name: REPORT_TITLES.weekly, param: "week", form: "a real ISO week such as 2026-W39", latest: V1_OPERATIONS.latestWeekly.cacheControl, byKey: V1_OPERATIONS.weeklyByWeek.cacheControl },
+    { kind: "monthly", name: REPORT_TITLES.monthly, param: "month", form: "a real month such as 2026-09", latest: V1_OPERATIONS.latestMonthly.cacheControl, byKey: V1_OPERATIONS.monthlyByMonth.cacheControl },
   ] as const) {
     app.get(`/api/v1/agent/${p.kind}`, publicHandler(async (req, reply) => {
       strictQuery(req, []);

@@ -34,7 +34,10 @@ export const SITE = {
   feedbackLead: "发现 bug、想要的功能、看不顺眼的地方，都可以告诉我们。",
   /** 反馈表单邮箱框里的提示。 */
   feedbackEmailHint: "留下邮箱，我们可以回信联系你",
-  /** 一句话介绍：搜索引擎、分享卡片、RSS、llms.txt 会用。 */
+  /**
+   * 一句话介绍：搜索引擎、分享卡片、RSS、llms.txt 会用。
+   * 这里如果点出日报、周报、月报的刊名，用 REPORT_TITLES，不要用 subject 拼成「电力日报」。
+   */
   description: `从一批 AI 信源里挑出值得看的动态，把同一件事的多篇报道归到一起，${EDITION_WHEN.daily} 出一份日报。`,
   /** llms.txt 里一句话介绍下面的一段详细介绍（选填）。 */
   llmsIntro: null as string | null,
@@ -190,7 +193,8 @@ export const AGENT = {
 
 /**
  * 日报、周报、月报对外刊名里的词。可以比 subject 更完整：subject 仍是「电力」这类短行业词
- * （「全部电力动态」），报头和页面标题写「能源电力日报」。
+ * （「全部电力动态」），报头、页面标题、RSS、llms.txt 和给 Agent 的说明写「能源电力日报」。
+ * 自己维护 site.ts 的部署要带上 REPORT_WORD / REPORT_TITLES；description、llmsIntro、关于页里写死的短刊名也要改成引用它们。
  */
 export const REPORT_WORD = "能源电力";
 
