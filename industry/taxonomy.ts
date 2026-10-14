@@ -11,12 +11,17 @@
  * feedLabel 是分类 RSS 标题里的名字（不写就用 label）。公开接口、RSS 和 MCP 里要把一类并进另一类发布，写在站点设置里（site/site.ts 的 PUBLIC_CATEGORIES）。
  */
 export const CATEGORIES = [
-  { key: "ai-models", label: "模型", feedLabel: "AI 模型", section: "模型发布/更新", guide: "模型本身的发布、版本、权重开放、能力或价格变化，以及既有榜单上的模型成绩。公布一次跑分不是发布新基准，也不是教程。" },
-  { key: "ai-products", label: "产品", feedLabel: "AI 产品", section: "产品发布/更新", guide: "可使用的 AI 产品、功能、应用、工具、API、平台和工程组件的发布更新。模型厂商发布的推理框架、算子库、硬件适配组件仍是产品，不能因为厂商名归成模型。" },
-  { key: "industry", label: "行业", feedLabel: "行业动态", section: "行业动态", guide: "已发生的公司经营、融资并购、人事、合作、诉讼、政策、真实安全事故及调查进展。新闻由当事人发帖、带有态度，也不因此变成观点。" },
-  { key: "paper", label: "论文", feedLabel: "论文", section: "论文研究", guide: "以新研究方法、实验设计与发现为核心的论文、技术报告、新基准或研究数据集。系统性红队实验属于研究；既有榜单成绩归模型，真实事故的新闻调查归行业。" },
-  { key: "tip", label: "教程", section: "技巧与观点", guide: "读者可以照着使用的方法、提示词、工具用法、工程实践复盘与技术讲解。重点是可复用的做法；单纯发布工具归产品，只有态度和预测而无做法归观点。", commentary: true },
-  { key: "opinion", label: "观点", section: "技巧与观点", guide: "重点是作者的解释、判断、主张、预测、评论或访谈观点。讨论市场不自动归行业，作者是名人不自动归观点。", commentary: true },
+  { key: "policy", label: "政策监管", section: "政策监管", guide: "已经发布的电力政策、规划、监管规则、核准与价格机制。预测和评论不归这里。" },
+  { key: "market", label: "电力交易", section: "电力交易", guide: "电力中长期、现货、绿电和辅助服务交易，以及电价、结算和交易规则的落地。" },
+  { key: "grid", label: "电网建设", section: "电网建设", guide: "主网、配网、特高压和并网工程的建设、投运与投资。" },
+  { key: "new-energy", label: "新能源", section: "新能源", guide: "风电、光伏、氢能等新能源的项目、并网、消纳和产业动态。" },
+  { key: "coal-power", label: "火电", section: "火电", guide: "煤电、气电的项目、改造、燃料和保供。" },
+  { key: "nuclear-hydro", label: "水电", section: "水电", guide: "常规水电和抽水蓄能的项目、调度与建设。" },
+  { key: "nuclear", label: "核电", section: "核电", guide: "核电项目、建造、运行和核安全监管。" },
+  { key: "tech", label: "电力技术", section: "电力技术", guide: "电力设备、系统和控制技术的投运或工程进展。" },
+  { key: "safety", label: "安全管理", section: "安全管理", guide: "电力安全事故、隐患治理、约谈和安全监管行动。" },
+  { key: "corporate", label: "电力项目", section: "电力项目", guide: "发电企业、电网企业和项目公司的经营、人事、合作与具体项目进展。" },
+  { key: "commentary", label: "评论分析", section: "评论分析", guide: "以解释、判断、预测或评论为主的稿件。", commentary: true },
 ] as const satisfies ReadonlyArray<{ key: string; label: string; feedLabel?: string; section: string; guide: string; commentary?: true }>;
 
 /**
