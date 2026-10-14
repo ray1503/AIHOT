@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router";
 import { IntentLink } from "./IntentLink";
 import { useEntrance } from "../../lib/hydration";
@@ -56,14 +56,58 @@ const SIZES = {
   xs: "h-11 px-3 text-[12.5px] lg:h-7",
 } as const;
 
+/** Which ends of a horizontal scroller still have content past the edge. */
+function useScrollEdges(ref: RefObject<HTMLDivElement | null>, enabled: boolean) {
+  const [edges, setEdges] = useState({ left: false, right: false });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!enabled || !el) return;
+    const update = () => {
+      const max = el.scrollWidth - el.clientWidth;
+      const left = el.scrollLeft > 2;
+      const right = max - el.scrollLeft > 2;
+      setEdges((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [enabled, ref]);
+  return edges;
+}
+
+/** Fade only the ends that can still be scrolled to, so a fitted row is not clipped. */
+function edgeMask(edges: { left: boolean; right: boolean }): string | undefined {
+  if (!edges.left && !edges.right) return undefined;
+  const left = edges.left ? "transparent" : "black";
+  const right = edges.right ? "transparent" : "black";
+  return `linear-gradient(to right, ${left}, black 28px, black calc(100% - 36px), ${right})`;
+}
+
+/** Keep the chosen option in view without scrolling the page. */
+function revealCurrent(el: HTMLElement) {
+  const current = el.querySelector<HTMLElement>("[aria-current='page'], [aria-selected='true']");
+  if (!current) return;
+  const box = current.getBoundingClientRect();
+  const host = el.getBoundingClientRect();
+  const pad = 28;
+  if (box.left < host.left + pad) el.scrollLeft -= host.left + pad - box.left;
+  else if (box.right > host.right - pad) el.scrollLeft += box.right - (host.right - pad);
+}
+
 /**
  * The site's one switch control: a grey pill track with a white thumb that glides to the chosen
  * option. Boards, categories, sources, report kinds, page sections and language all use it, so every
- * switch looks and moves the same. Scrolls sideways when it runs out of room, or wraps (`wrap`)
- * onto another line; `fill` spreads the options evenly across the available width.
+ * switch looks and moves the same. Scrolls sideways when it runs out of room; `fill` spreads the
+ * options evenly across the available width. `scrollFade` hints that a one-line row continues.
  */
 export function PillTabs({
-  items, active, onSelect, layoutId, size = "md", label, fill = false, wrap = false, className = "",
+  items, active, onSelect, layoutId, size = "md", label, fill = false, scrollFade = false, className = "",
 }: {
   items: TabItem[];
   active: string;
@@ -73,19 +117,30 @@ export function PillTabs({
   size?: keyof typeof SIZES;
   label?: string;
   fill?: boolean;
-  /** Wrap onto another line instead of scrolling sideways (the desktop category row beside search). */
-  wrap?: boolean;
+  /** One line that scrolls, with a fade on each end that still has more options. */
+  scrollFade?: boolean;
   className?: string;
 }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const edges = useScrollEdges(scrollerRef, scrollFade);
+  const mask = scrollFade ? edgeMask(edges) : undefined;
+  useLayoutEffect(() => {
+    if (!scrollFade || !scrollerRef.current) return;
+    revealCurrent(scrollerRef.current);
+  }, [active, scrollFade, items.length]);
   const links = items.some((t) => t.to);
   const Track = links ? "nav" : "div";
   return (
-    <div className={`${wrap ? "w-full min-w-0" : `scrollbar-none max-w-full overflow-x-auto ${fill ? "w-full" : ""}`} ${className}`}>
+    <div
+      ref={scrollerRef}
+      className={`scrollbar-none max-w-full overflow-x-auto ${scrollFade ? "w-full min-w-0 overscroll-x-contain" : fill ? "w-full" : ""} ${className}`}
+      style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
+    >
       <Track
         data-pill-track=""
         aria-label={label}
         role={links ? undefined : "tablist"}
-        className={`${wrap ? "flex w-max max-w-full flex-wrap" : fill ? "grid w-full" : "inline-flex w-max"} gap-0.5 rounded-full bg-bg-sunk p-0.5 lg:p-[3px] ring-1 ring-inset ring-line-soft dark:bg-bg-muted/60`}
+        className={`${fill ? "grid w-full" : "inline-flex w-max flex-nowrap"} gap-0.5 rounded-full bg-bg-sunk p-0.5 lg:p-[3px] ring-1 ring-inset ring-line-soft dark:bg-bg-muted/60`}
         style={fill ? { gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` } : undefined}
       >
         {items.map((t) => {

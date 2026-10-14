@@ -40,11 +40,13 @@ export default function Home() {
       <FeedBar base="/" category={filters.category} channel={filters.channel} />
       <ActiveFilters base="/" category={filters.category} channel={filters.channel} tag={filters.tag} />
       <div className="hidden lg:block">
-        <h1 className="text-[24px] font-semibold leading-[1.3] text-ink">{title}</h1>
-        <div className="mb-5 mt-4 flex items-start justify-between gap-4">
-          <CategoryTabs base="/" category={filters.category} channel={filters.channel} layoutId="home-cat-desk" className="min-w-0 flex-1" />
-          <SearchField keep={{ category: filters.category }} />
+        <div className="flex items-center justify-between gap-6">
+          <h1 className="min-w-0 flex-1 text-[24px] font-semibold leading-[1.3] text-ink [overflow-wrap:anywhere]">{title}</h1>
+          <div className="w-60 shrink-0">
+            <SearchField keep={{ category: filters.category }} />
+          </div>
         </div>
+        <CategoryTabs base="/" category={filters.category} channel={filters.channel} layoutId="home-cat-desk" className="mb-5 mt-4 min-w-0" />
       </div>
 
       {data.hot && inNav("/hot") && <HotTopics entries={data.hot} />}

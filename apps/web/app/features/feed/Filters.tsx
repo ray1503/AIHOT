@@ -41,10 +41,10 @@ function filterKey(category: CategoryKey | null, channel: ChannelKey): string {
   return channel === "firstParty" ? "firstParty" : (category ?? "all");
 }
 
-/** Desktop: category tabs beside search. They wrap onto another line so they don't run into the field. */
+/** Desktop: one scrolling row of category tabs. It does not wrap, and search sits on the title line so it does not take this row's width. */
 export function CategoryTabs({ base, category, channel = "all", layoutId, className = "" }: { base: string; category: CategoryKey | null; channel?: ChannelKey; layoutId: string; className?: string }) {
   const [params] = useSearchParams();
-  return <PillTabs wrap items={filterOptions(base, params, "全部").map(o => ({ ...o, prefetch: 'intent' as const }))} active={filterKey(category, channel)} layoutId={layoutId} label="筛选" className={className} />;
+  return <PillTabs scrollFade items={filterOptions(base, params, "全部").map(o => ({ ...o, prefetch: 'intent' as const }))} active={filterKey(category, channel)} layoutId={layoutId} label="筛选" className={className} />;
 }
 
 /**
@@ -164,7 +164,7 @@ function useSlashFocus(ref: React.RefObject<HTMLInputElement | null>) {
   }, [ref]);
 }
 
-/** Desktop search field (GET /all?q=…): at the end of the filter row as the same grey track, at the height of md tabs, with a "/" hint. */
+/** Desktop search field (GET /all?q=…): on the title line, clear of the category row, at the height of md tabs, with a "/" hint. */
 export function SearchField({ defaultValue = "", keep = {} }: { defaultValue?: string; keep?: Record<string, string | null> }) {
   const [value, setValue] = useState(defaultValue);
   const navigation = useNavigation();
