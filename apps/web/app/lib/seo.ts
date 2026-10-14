@@ -3,8 +3,8 @@
 //; its address from SITE_URL.
 import type { MetaDescriptor } from "react-router";
 import type { ReportDetail, StoryDetail, TimelineFilters } from "@aihot/contracts/site";
-import { isCategoryKey, isChannelKey } from "@aihot/contracts/taxonomy";
-import { REPORT_TITLES, SITE, subjectAfter, withSubject } from "@aihot/site";
+import { CATEGORY_LABELS, CHANNEL_LABELS, isCategoryKey, isChannelKey, type CategoryKey } from "@aihot/contracts/taxonomy";
+import { FILTER_LANDINGS, REPORT_TITLES, SITE, subjectAfter, withSubject } from "@aihot/site";
 
 /**
  * The site's address: SITE_URL while rendering on the server (what crawlers and share previews read),
@@ -68,6 +68,30 @@ export function hasFeedFilters(filters: TimelineFilters | undefined): boolean {
 /** "Title · Site". */
 export function titled(title: string): string {
   return `${title} · ${SITE.name}`;
+}
+
+export interface FilterLanding {
+  /** The chip label, and the page's only h1. */
+  h1: string;
+  /** Document-title stem for the featured feed (`title · site name`). */
+  title: string;
+  /** Name in the all-feed document title (`allName · <all feed> · site name`). */
+  allName: string;
+  description: string;
+}
+
+/**
+ * Copy for one indexable feed filter: a category, or 一手. Tag searches and the legacy
+ * 资讯 / X channels are not landings. 一手 wins when both it and a category are present,
+ * the same way the filter bar shows one choice.
+ */
+export function filterLanding(filters: { channel: string; category: string | null } | null | undefined): FilterLanding | null {
+  if (!filters) return null;
+  const key = filters.channel === "firstParty" ? "firstParty" : filters.channel === "all" ? filters.category : null;
+  if (!key || !Object.hasOwn(FILTER_LANDINGS, key)) return null;
+  const row = FILTER_LANDINGS[key as keyof typeof FILTER_LANDINGS];
+  const h1 = key === "firstParty" ? CHANNEL_LABELS.firstParty : CATEGORY_LABELS[key as CategoryKey];
+  return { h1, title: row.title, allName: "allName" in row ? row.allName : h1, description: row.description };
 }
 
 export function pageMeta(input: PageMetaInput): MetaDescriptor[] {

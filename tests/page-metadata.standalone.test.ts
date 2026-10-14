@@ -10,8 +10,9 @@ import { createServer } from "node:http";
 import { after, before, test } from "node:test";
 import * as cheerio from "cheerio";
 import type { FeedItemSummary, ReportCitation, ReportDetail, ReportKind, SiteItemDetail, StoryDetail } from "@aihot/contracts/site";
-import { REPORT_TITLES, REPORTS, SITE } from "@aihot/site";
-import { articleLd, readFilters, reportLd } from "../apps/web/app/lib/seo.ts";
+import { CATEGORY_KEYS, CATEGORY_LABELS, CHANNEL_LABELS } from "@aihot/contracts/taxonomy";
+import { ALL_FILTER_LEAD, FILTER_LANDINGS, HOME_H1, HOT_H1, REPORT_TITLES, REPORTS, SITE, subjectAfter, withSubject } from "@aihot/site";
+import { articleLd, filterLanding, readFilters, reportLd, titled } from "../apps/web/app/lib/seo.ts";
 import { startWebServer, type WebServer } from "../apps/web/tests/web-server.ts";
 
 const at = "2026-10-04T08:00:00.000Z";
@@ -28,6 +29,7 @@ const api = createServer((req, res) => {
   const send = (value: unknown) => res.end(JSON.stringify(value));
   if (path === "/api/site/meta") return send({ changelogVersion: "fixture" });
   if (path === "/api/site/timeline") return send({ filters: readFilters(url.searchParams), cards: [{ key: item.id, anchorAt: at, item, group: null }], nextCursor: null, hot: null, dayCounts: { "2026-10-04": 1 } });
+  if (path === "/api/site/hot") return send({ computedAt: at, windowHours: 48, entries: [] });
   if (path === "/api/site/pool") return send({ filters: { ...readFilters(url.searchParams), q: url.searchParams.get("q"), tab: url.searchParams.get("tab") ?? "time" }, items: [item], page: Number(url.searchParams.get("page") ?? 1), pageCount: 3, total: 100, todayCount: 1, freshness: at });
   if (path === `/api/site/items/${item.id}`) return send(detail);
   if (path === `/api/site/stories/${story.publicId}`) return send(story);
@@ -64,6 +66,68 @@ test("filtered feeds keep their exact content address but leave indexing to the 
   const $ = await page("/all?q=Claude&tab=relevance&page=2&anchorAt=old");
   assert.equal($("meta[name=robots]").attr("content"), "noindex, follow");
   assert.equal($("link[rel=canonical]").attr("href"), `${web.origin}/all?q=Claude&tab=relevance&page=2`);
+});
+
+test("home, category filters, first-party and the hot list each have one heading and their own title", async () => {
+  const headings = ($: cheerio.CheerioAPI) => $("h1").toArray().map((node) => $(node).text().trim());
+  const home = await page("/");
+  assert.deepEqual(headings(home), [HOME_H1]);
+  assert.equal(home("title").text(), SITE.homeTitle);
+  assert.equal(home("meta[property='og:title']").attr("content"), SITE.homeTitle);
+  assert.equal(home("meta[name=description]").attr("content"), SITE.description);
+  assert.equal(home("h1").length, 1);
+
+  for (const key of CATEGORY_KEYS) {
+    const landing = filterLanding({ channel: "all", category: key });
+    assert.ok(landing, key);
+    assert.equal(landing.h1, CATEGORY_LABELS[key]);
+    assert.equal(FILTER_LANDINGS[key].title, landing.title);
+    const $ = await page(`/?category=${key}`);
+    const title = titled(landing.title);
+    assert.deepEqual(headings($), [landing.h1], key);
+    assert.equal($("title").text(), title, key);
+    assert.equal($("meta[property='og:title']").attr("content"), title, key);
+    assert.equal($("meta[property='og:description']").attr("content"), landing.description, key);
+    assert.equal($("meta[name=description]").attr("content"), landing.description, key);
+    assert.notEqual(landing.description, SITE.description);
+    assert.equal($("link[rel=canonical]").attr("href"), `${web.origin}/?category=${key}`);
+    assert.equal($("meta[name=robots]").attr("content"), "noindex, follow");
+  }
+
+  const first = filterLanding({ channel: "firstParty", category: null })!;
+  assert.equal(first.h1, CHANNEL_LABELS.firstParty);
+  const firstPage = await page("/?channel=firstParty");
+  const firstTitle = titled(first.title);
+  assert.deepEqual(headings(firstPage), [first.h1]);
+  assert.equal(firstPage("title").text(), firstTitle);
+  assert.equal(firstPage("meta[property='og:title']").attr("content"), firstTitle);
+  assert.equal(firstPage("meta[name=description]").attr("content"), first.description);
+  assert.equal(firstPage("link[rel=canonical]").attr("href"), `${web.origin}/?channel=firstParty`);
+
+  const grid = filterLanding({ channel: "all", category: "grid" })!;
+  const allGrid = await page("/all?category=grid");
+  const allTitle = titled(`${grid.allName} · ${subjectAfter("全部", "动态")}`);
+  assert.deepEqual(headings(allGrid), [grid.h1]);
+  assert.equal(allGrid("title").text(), allTitle);
+  assert.equal(allGrid("meta[property='og:title']").attr("content"), allTitle);
+  assert.equal(allGrid("meta[name=description]").attr("content"), `${ALL_FILTER_LEAD}${grid.description}`);
+  assert.equal(allGrid("link[rel=canonical]").attr("href"), `${web.origin}/all?category=grid`);
+
+  const allFirst = await page("/all?channel=firstParty");
+  assert.deepEqual(headings(allFirst), [CHANNEL_LABELS.firstParty]);
+  assert.equal(allFirst("title").text(), titled(`${first.allName} · ${subjectAfter("全部", "动态")}`));
+
+  const all = await page("/all");
+  assert.deepEqual(headings(all), [subjectAfter("全部", "动态")]);
+  assert.equal(all("title").text(), titled(subjectAfter("全部", "动态")));
+  assert.equal(all("meta[name=description]").attr("content"), `${SITE.name} 收录的${subjectAfter("全部", "相关动态")}，可按频道、类别与标签筛选，支持中英文搜索。`);
+
+  const hot = await page("/hot");
+  assert.deepEqual(headings(hot), [HOT_H1]);
+  assert.equal(hot("title").text(), titled(withSubject("热点榜")));
+  assert.equal(hot("meta[property='og:title']").attr("content"), withSubject("热点榜"));
+  assert.equal(hot("meta[name=description]").attr("content"), `${subjectAfter("过去 48 小时", "圈")}讨论最多的 10 个事件：热度指数、趋势与组成热度的公开来源。`);
+  assert.ok(hot("p").toArray().some((node) => hot(node).text() === "热点"));
 });
 
 test("ordinary feed pages remain indexable and normalize ignored parameters", async () => {
