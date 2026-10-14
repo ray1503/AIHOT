@@ -1,12 +1,15 @@
 // Reports through the public read layer: website DTOs and the v1 shapes. Only real reports are
-// listed; a missing date is a 404, never another day. Withdrawn citations are marked, not shown.
-import type { ReportCitation, ReportDetail, ReportIndexEntry, ReportNavigationEntry, ReportKind } from "@aihot/contracts/site";
+// listed; a missing date is a 404, never another day. An empty weekly or monthly placeholder stays in
+// the database but is left out of indexes, feeds and discovery (report-shell.ts). Withdrawn citations
+// are marked, not shown.
+import type { ReportCitation, ReportDetail, ReportIndexEntry, ReportLatestPage, ReportNavigationEntry, ReportKind } from "@aihot/contracts/site";
 import { REPORT_TITLES, REPORTS, SITE } from "@aihot/site";
 import { sql } from "../db.ts";
 import { cached, type Cached } from "../lib/cache.ts";
 import { proxiedImage, proxiedImageSet } from "../media/imgproxy.ts";
 import { isoWeekRange, monthRange } from "@aihot/contracts/time";
 import { dailyUrl, itemUrl, periodUrl, siteUrl } from "./links.ts";
+import { hidePlaceholderKeys, isPlaceholderReport, placeholderKeys } from "./report-shell.ts";
 import { publicSourceName } from "./rules.ts";
 import { listedCondition } from "./scope.ts";
 
@@ -70,6 +73,8 @@ async function unavailableIds(ids: string[]): Promise<Set<string>> {
  * 401 although the index keeps 400; a back-filled or deleted issue renumbers the ones after it.
  */
 export async function reportIndexRows(kind: ReportKind, limit: number) {
+  // Placeholders are not issues: they do not take a number and they do not fill the index.
+  const hide = hidePlaceholderKeys(sql`key`, kind === "daily" ? [] : await placeholderKeys(kind));
   return sql<{ key: string; issue_number: number; content: Record<string, any>; generated_at: Date }[]>`
     SELECT key, generated_at, (row_number() OVER (ORDER BY key))::int AS issue_number, jsonb_build_object(
       'lead', content->'lead', 'headline', content->'headline', 'title', content->'title',
@@ -80,7 +85,7 @@ export async function reportIndexRows(kind: ReportKind, limit: number) {
          FROM jsonb_array_elements(jsonb_path_query_array(content,
            CASE WHEN kind = 'daily' THEN '$.sections[*].items[*]'::jsonpath ELSE '$.themes[*].storyRefs[*]'::jsonpath END
          )) WITH ORDINALITY AS cited(item, ord))))) AS content
-    FROM reports WHERE kind = ${kind} ORDER BY key DESC LIMIT ${limit}`;
+    FROM reports WHERE kind = ${kind} ${hide} ORDER BY key DESC LIMIT ${limit}`;
 }
 
 /** The entries an issue cites in reading order: a daily's sections, a weekly's or monthly's themes. */
@@ -325,16 +330,18 @@ function readingMinutes(text: string): number {
 }
 
 async function neighbors(kind: ReportKind, key: string): Promise<{ prev: string | null; next: string | null }> {
+  const excluded = kind === "daily" ? [] : await placeholderKeys(kind);
   const [row] = await sql<{ prev: string | null; next: string | null }[]>`
-    SELECT (SELECT key FROM reports WHERE kind = ${kind} AND key < ${key} ORDER BY key DESC LIMIT 1) AS prev,
-      (SELECT key FROM reports WHERE kind = ${kind} AND key > ${key} ORDER BY key ASC LIMIT 1) AS next`;
+    SELECT (SELECT key FROM reports WHERE kind = ${kind} AND key < ${key} ${hidePlaceholderKeys(sql`key`, excluded)} ORDER BY key DESC LIMIT 1) AS prev,
+      (SELECT key FROM reports WHERE kind = ${kind} AND key > ${key} ${hidePlaceholderKeys(sql`key`, excluded)} ORDER BY key ASC LIMIT 1) AS next`;
   return { prev: row?.prev ?? null, next: row?.next ?? null };
 }
 
 export async function loadReport(kind: ReportKind, key: string): Promise<ReportDetail | null> {
-  // Its number counts every issue of the kind up to it, as the index numbers them (reportIndexRows).
+  // Its number counts every real issue of the kind up to it, as the index numbers them (reportIndexRows).
+  const hideEarlier = hidePlaceholderKeys(sql`earlier.key`, kind === "daily" ? [] : await placeholderKeys(kind));
   const [r] = await sql<(Pick<ReportRow, "content" | "generated_at"> & { issue_number: number })[]>`
-    SELECT r.content, r.generated_at, (SELECT count(*)::int FROM reports earlier WHERE earlier.kind = r.kind AND earlier.key <= r.key) AS issue_number
+    SELECT r.content, r.generated_at, (SELECT count(*)::int FROM reports earlier WHERE earlier.kind = r.kind AND earlier.key <= r.key ${hideEarlier}) AS issue_number
     FROM reports r WHERE r.kind = ${kind} AND r.key = ${key}`;
   if (!r) return null;
   const c = r.content;
@@ -369,22 +376,25 @@ export async function loadReport(kind: ReportKind, key: string): Promise<ReportD
   const [{ prev, next }, picture] = await Promise.all([neighbors(kind, key), leadItem?.itemId && leadItem.available ? leadCover(leadItem.itemId) : null]);
   const cover = picture && leadItem ? { ...picture, caption: kind === "daily" || c.leadItemId ? null : leadItem.title } : null;
   const headline = kind === "daily" ? null : periodicHeadline(c);
+  const shell = isPlaceholderReport(kind, c);
   const issueLabel = `${REPORT_TITLES[kind]} · ${key}`;
   const storedTitle = typeof c.title === "string" && c.title && !isComposerIssueTitle(c.title) ? c.title : null;
-  const title = kind === "daily" ? issueLabel
+  const title = shell || kind === "daily" ? issueLabel
     : String((hasCitedLead && c.title === headline ? named?.title : storedTitle) ?? issueLabel);
+  // A placeholder keeps its row, but the public read does not repeat its ops note as a headline.
+  const lead = shell ? null : (hasCitedLead
+    ? (named ? { title: named.title, leadParagraph: (kind === "daily" ? named.leadParagraph : overview) ?? "" } : null)
+    : kind === "daily" ? c.lead ?? null
+      : c.lead ? { ...c.lead, leadParagraph: overview ?? "" } : (headline ? { title: headline, leadParagraph: overview ?? "" } : null));
   return {
     kind,
     key,
     issueNumber: r.issue_number,
     title,
     generatedAt: r.generated_at.toISOString(),
-    lead: hasCitedLead
-      ? (named ? { title: named.title, leadParagraph: (kind === "daily" ? named.leadParagraph : overview) ?? "" } : null)
-      : kind === "daily" ? c.lead ?? null
-        : c.lead ? { ...c.lead, leadParagraph: overview ?? "" } : (headline ? { title: headline, leadParagraph: overview ?? "" } : null),
+    lead,
     leadItemId: (kind === "daily" || c.leadItemId) && leadItem?.available ? leadItem.itemId : null,
-    overview,
+    overview: shell ? null : overview,
     highlights,
     sections,
     flashes: (c.flashes ?? []).map(cite),
@@ -397,6 +407,7 @@ export async function loadReport(kind: ReportKind, key: string): Promise<ReportD
     readingMinutes: readingMinutes(text),
     prev,
     next,
+    ...(shell ? { shell: true as const } : {}),
   };
 }
 
@@ -417,6 +428,17 @@ export function reportIndex(kind: ReportKind) {
     indexes.set(kind, entry);
   }
   return entry.get();
+}
+
+/** The latest page: a placeholder in the newest slot is a wait, not the current issue. Older real issues stay in the archive. */
+export async function latestReportPage(kind: ReportKind): Promise<ReportLatestPage> {
+  const index = await listReports(kind);
+  if (kind !== "daily") {
+    const [newest] = await sql<{ content: unknown }[]>`SELECT content FROM reports WHERE kind = ${kind} ORDER BY key DESC LIMIT 1`;
+    if (newest && isPlaceholderReport(kind, newest.content)) return { index: reportNavigation(kind, index, ""), report: null, shell: true };
+  }
+  const report = index[0] ? await loadReport(kind, index[0].key) : null;
+  return { index: reportNavigation(kind, index, report?.key ?? ""), report };
 }
 
 export async function listReports(kind: ReportKind, limit = INDEX_LIMIT): Promise<ReportIndexEntry[]> {
@@ -534,8 +556,10 @@ export interface FeedIssue {
 /**
  * The newest issues of a kind for its RSS feed: headline, lead paragraph (a weekly's or monthly's
  * overview) and each section's entry titles with their links on this site, withdrawn ones left out.
+ * Empty period placeholders are not items, so a feed whose only issue is a shell has none.
  */
 export async function feedIssues(kind: ReportKind, limit: number): Promise<FeedIssue[]> {
+  const hide = hidePlaceholderKeys(sql`key`, kind === "daily" ? [] : await placeholderKeys(kind));
   const rows = kind === "daily"
     ? await sql<{ key: string; generated_at: Date; content: Record<string, any> }[]>`
       SELECT key, generated_at, jsonb_build_object(
@@ -553,7 +577,7 @@ export async function feedIssues(kind: ReportKind, limit: number): Promise<FeedI
           (SELECT coalesce(jsonb_agg(jsonb_build_object('itemId', i->'itemId', 'title', i->'title') ORDER BY ord), '[]'::jsonb)
            FROM jsonb_array_elements(coalesce(t->'storyRefs', '[]'::jsonb)) WITH ORDINALITY AS e(i, ord))) ORDER BY tord), '[]'::jsonb)
           FROM jsonb_array_elements(coalesce(content->'themes', '[]'::jsonb)) WITH ORDINALITY AS x(t, tord))) AS content
-      FROM reports WHERE kind = ${kind} ORDER BY key DESC LIMIT ${limit}`;
+      FROM reports WHERE kind = ${kind} ${hide} ORDER BY key DESC LIMIT ${limit}`;
   const shape = kind === "daily" ? "daily" : "periodic";
   const gone = await unavailableIds(rows.flatMap((r) => entriesOf(r.content, shape).map((i) => i.itemId)));
   const leads = kind === "daily" ? await dailyLeads(rows, gone) : null;
@@ -611,10 +635,11 @@ export async function v1Periods(kind: PeriodKind, limit: number) {
  * items it carries in order. Withdrawn items are left out; source names are as stored, like the daily's.
  */
 export async function v1Period(kind: PeriodKind, key: string | "latest") {
+  // The newest row wins, including when it is a placeholder: an older real issue is not substituted for it.
   const [r] = key === "latest"
     ? await sql<ReportRow[]>`SELECT kind, key, window_start, window_end, content, generated_at FROM reports WHERE kind = ${kind} ORDER BY key DESC LIMIT 1`
     : await sql<ReportRow[]>`SELECT kind, key, window_start, window_end, content, generated_at FROM reports WHERE kind = ${kind} AND key = ${key}`;
-  if (!r) return null;
+  if (!r || isPlaceholderReport(kind, r.content)) return null;
   const c = r.content;
   const raw: Array<Record<string, any>> = (c.themes ?? []).flatMap((t: any) => t.storyRefs ?? []);
   const avail = await availability([...new Set(raw.map((i) => i.itemId).filter(Boolean))] as string[]);

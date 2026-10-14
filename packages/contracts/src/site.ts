@@ -313,6 +313,11 @@ export interface ReportDetail {
   readingMinutes: number;
   prev: string | null;
   next: string | null;
+  /**
+   * An empty weekly or monthly saved only to hold its period. The page stays at its URL and is left
+   * out of discovery; it is not a compiled issue.
+   */
+  shell?: true;
 }
 
 export interface ReportIndexEntry {
@@ -331,6 +336,8 @@ export interface ReportIndexResponse {
 export interface ReportLatestPage {
   index: ReportNavigationEntry[];
   report: ReportDetail | null;
+  /** The newest stored issue is an empty placeholder, so this page is waiting for a compiled one. */
+  shell?: true;
 }
 
 /** A report's archive selector, or one month of the daily archive. */

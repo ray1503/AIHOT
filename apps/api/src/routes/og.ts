@@ -9,7 +9,7 @@ import { findTopic, TOPIC_GROUPS, TOPICS } from "@aihot/backend/publication/topi
 import { loadStoryDetail, resolveStory } from "@aihot/backend/publication/stories";
 import { ogEtag, renderOg, type OgCard } from "@aihot/backend/media/og";
 import { posterEtag, renderPoster, type Poster } from "@aihot/backend/media/poster";
-import { CARDS, ITEM_COPY, REPORT_TITLES, REPORTS, subjectAfter, withSubject } from "@aihot/site";
+import { CARDS, ITEM_COPY, periodShellCopy, REPORT_TITLES, REPORTS, subjectAfter, withSubject } from "@aihot/site";
 import { config } from "@aihot/backend/config";
 
 /** The pages' share cards: the site's texts, and the topic count of the topic list. */
@@ -81,6 +81,10 @@ export function registerOg(app: FastifyInstance) {
     if (!["daily", "weekly", "monthly"].includes(kind) || !file.endsWith(".png")) return notFound(reply);
     const r = await loadReport(kind as ReportKind, file.slice(0, -4));
     if (!r) return notFound(reply);
+    if (r.shell && r.kind !== "daily") {
+      const copy = periodShellCopy(r.kind);
+      return send(req, reply, { kicker: `${REPORT_NAMES[r.kind]} · ${r.key}`, title: copy.title, subtitle: copy.paragraph, meta: null }, 3600, CONTENT_IMAGE_CACHE);
+    }
     const count = r.sections.reduce((n, s) => n + s.items.length, 0);
     return send(req, reply, {
       kicker: `${REPORT_NAMES[r.kind]} · ${r.key}`,
