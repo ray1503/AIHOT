@@ -205,6 +205,9 @@ export const REPORT_TITLES = {
   monthly: `${REPORT_WORD}月报`,
 } as const;
 
+/** 关于页信源河的读屏说明。图上的报纸用同一个日报刊名。 */
+export const RIVER_CAPTION = `示意图：每条线是一个信源；线汇成一束束，代表同一件事的多篇报道；经过精选的闸门，只有少数几束通过，汇入每天的${REPORT_TITLES.daily}。`;
+
 /** 日报、周报、月报版面上的说法。 */
 export const REPORTS = {
   /** 报头下面的出版者一行。 */

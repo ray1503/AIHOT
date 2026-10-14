@@ -79,6 +79,14 @@ docker compose run --rm setup && docker compose up -d
 
 下面按时间从新到旧列出每次更新要注意的事。
 
+#### 首页数据集描述改用刊名（2026 年 10 月 14 日）
+
+没有迁移，没有新环境变量。首页结构化数据里 Dataset 的 `description`，以及关于页信源河的读屏说明，写 `REPORT_TITLES.daily`。行业词仍只出现在「持续更新的中文电力行业动态」这类说法里。meta 关键词和 Dataset 的 `keywords` 不改。
+
+这两句在网页构建结果里。`docker compose up --no-build` 不会重建 `apps/web/build`，旧构建会继续输出短刊名，直到重新构建网页镜像。
+
+自己维护的 `site/changelog.json` 如果在正文里写了短刊名（例如「出一份电力日报」），改成引用刊名后的「出一份能源电力日报」。仓库里的示范 changelog 没有这句。
+
 #### 订阅和 Agent 文案改用刊名（2026 年 10 月 14 日）
 
 没有迁移，没有新环境变量。日报、周报、月报的 RSS 频道标题和每期条目标题，以及 `llms.txt`、给 Agent 的使用说明、接入页和这些接口里的刊名，都改读 `REPORT_TITLES`（`REPORT_WORD` 加「日报」「周报」「月报」），与网页标题一致。`subject` 仍只用于「全部动态」这类行业说法。
