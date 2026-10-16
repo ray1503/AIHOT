@@ -21,6 +21,9 @@ import { useHydratedFlag } from "./lib/hydration";
 import { titled } from "./lib/seo";
 import { webModules } from "./site-modules";
 
+/** 51.la analytics. Kept in the document so the next production rebuild does not drop the tag. */
+const LA_COLLECT_BOOT = `(function(){var t=function(){LA.init({id:"3RSFBNfNTeQLcen1",ck:"3RSFBNfNTeQLcen1",autoTrack:true});LA.track&&LA.track();};if(window.LA){t();}else{var i=setInterval(function(){if(window.LA){clearInterval(i);t();}},50);}})();`;
+
 export const links: Route.LinksFunction = () => [
   { rel: "icon", href: "/favicon.ico", sizes: "any" },
   { rel: "icon", type: "image/png", href: "/icon.png" },
@@ -59,6 +62,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="apple-mobile-web-app-title" content={SITE.name} />
         <script dangerouslySetInnerHTML={{ __html: APPEARANCE_BOOT_SCRIPT }} />
         {webModules().map((m) => m.root?.bootScript && <script key={m.name} dangerouslySetInnerHTML={{ __html: m.root.bootScript }} />)}
+        <script async charSet="UTF-8" id="LA_COLLECT" src="https://sdk.51.la/js-sdk-pro.min.js" />
+        <script dangerouslySetInnerHTML={{ __html: LA_COLLECT_BOOT }} />
         <Meta />
         <Links />
       </head>
